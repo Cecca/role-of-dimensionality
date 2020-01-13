@@ -1,9 +1,20 @@
 import h5py
 import numpy
 import sys
+import argparse 
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('datafile', metavar='FILE',
+                    help='the HDF5 file containing the dataset')
+parser.add_argument('queryfile', metavar='FILE',
+                    help='the text file containing queries')
+parser.add_argument('--expansion', action='store_true',
+                    help='the queries are selected by their expansion')
 
-fn = sys.argv[1]
-gn = sys.argv[2]
+args = parser.parse_args()
+
+fn = args.datafile # sys.argv[1]
+gn = args.queryfile # sys.argv[2]
+use_expansion = args.expansion
 
 # read h5py file completely
 f = h5py.File(fn)
@@ -27,8 +38,8 @@ diverse = list(map(int, lines[7].strip()[1:-1].split(",")))
 
 # make four different versions containing the different querysets
 
-def create_dataset(f, train, nn, dd, l, name):
-    g = h5py.File(fn.replace('.hdf5','') + '-%s.hdf5' % name, 'w')
+def create_dataset(f, train, nn, dd, l, name, difficulty_type):
+    g = h5py.File(fn.replace('.hdf5','') + '-{}-{}.hdf5'.format(name, difficulty_type), 'w')
 
     g.attrs['distance'] = f.attrs['distance']
     g.attrs['point_type'] = f.attrs['point_type']
@@ -49,9 +60,13 @@ def create_dataset(f, train, nn, dd, l, name):
 
     g.close()
 
+if use_expansion:
+    difficulty_type = "expansion"
+else:
+    difficulty_type = "lid"
 
-create_dataset(f, train, nn, dd, easy, 'easy')
-create_dataset(f, train, nn, dd, middle, 'middle')
-create_dataset(f, train, nn, dd, hard, 'hard')
-create_dataset(f, train, nn, dd, diverse, 'diverse')
+create_dataset(f, train, nn, dd, easy, 'easy', difficulty_type)
+create_dataset(f, train, nn, dd, middle, 'middle', difficulty_type)
+create_dataset(f, train, nn, dd, hard, 'hard', difficulty_type)
+create_dataset(f, train, nn, dd, diverse, 'diverse', difficulty_type)
 
