@@ -7,3 +7,5 @@ install/*.yaml
 install/lib-*/
 
 *.class
+.Rproj.user
+packrat/lib*/
