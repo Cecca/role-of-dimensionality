@@ -1,6 +1,6 @@
 import sys
 import random
-import argparse 
+import argparse
 
 random.seed(12341)
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -37,20 +37,32 @@ print(list(map(lambda x: x[0], middle)))
 print("Most difficult with avg difficulty: %f" % (sum(map(lambda x: x[-1], hard)) / 10000))
 print(list(map(lambda x: x[0], hard)))
 
-diffs = {}
+def choose_lid_diverse(estimates):
+    diffs = {}
 
-for i, diff in estimates:
-    diffs.setdefault(int(diff), [])
-    diffs[int(diff)].append(i)
+    for i, diff in estimates:
+        diffs.setdefault(int(diff), [])
+        diffs[int(diff)].append(i)
 
-dataset = []
+    dataset = []
 
-keys = list(diffs.keys())
+    keys = list(diffs.keys())
 #print(keys)
 
-for i in range(5000):
-    b = random.choice(keys)
-    dataset.append(random.choice(diffs[b]))
+    for i in range(5000):
+        b = random.choice(keys)
+        dataset.append(random.choice(diffs[b]))
 
-print("Diverse: %f" % (sum(map(lambda x: estimates[x][-1], dataset)) / 5000))
-print(dataset)
+    print("Diverse: %f" % (sum(map(lambda x: estimates[x][-1], dataset)) / 5000))
+    print(dataset)
+
+def choose_expansion_diverse(estimates):
+    mid = estimates[1500:-1500]
+    dataset = [x[0] for x in estimates[:1500] + estimates[-1500:] + [random.choice(mid) for _ in range(2000)]]
+    print("Diverse: %f" % (sum(map(lambda x: estimates[x][-1], dataset)) / 5000))
+    print(dataset)
+
+if use_expansion:
+    choose_expansion_diverse(estimates)
+else:
+    choose_lid_diverse(estimates)
