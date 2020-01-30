@@ -1,0 +1,3 @@
+plots:
+	Rscript make.R
+
