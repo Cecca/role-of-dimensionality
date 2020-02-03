@@ -12,5 +12,8 @@ suppressPackageStartupMessages({
   library(viridis)
   library(colorspace)
   library(scales)
+  library(see)
+  library(tikzDevice)
+  library(directlabels)
 })
 
