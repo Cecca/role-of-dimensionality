@@ -7,6 +7,15 @@ expansion_files <- list(
   "Sift" = "sift-128-euclidean-expansion.txt"
 )
 
+expansion_50_files <- list(
+  "fashion-mnist-784-euclidean-expansion-50.txt",
+  "glove-100-angular-expansion-50.txt",
+  "glove-2m-300-angular-expansion-50.txt",
+  "gnews-300-angular-expansion-50.txt",
+  "mnist-784-euclidean-expansion-50.txt",
+  "sift-128-euclidean-expansion-50.txt"
+)
+
 lid_files <- list(
   "Fashion-mnist" = "fashion-mnist-784-euclidean-lid.txt",
   "Glove-100" = "glove-100-angular-lid.txt",
@@ -53,25 +62,58 @@ plan <- drake_plan(
   # ------- Performance plots ----------
   data_expansion = load_results("res-with-expansion.csv.bz2") %>% 
     add_difficulty() %>% 
-    recode_algos(),
+    recode_algos() %>% 
+    recode_datasets(),
+  
+  averages_recoded = averages %>% ungroup() %>% recode_datasets() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard", "diverse"),
+                               ordered = TRUE)),
   
   plot_recall_vs_qps = target(
-    data_expansion %>% 
-      filter(dataset == str_c(dataset_name, difficulty_name, sep="-")) %>% 
+    averages_recoded %>% 
+      filter(dataset == dataset_name, algorithm != "bruteforce-blas") %>% 
       do_plot_recall_vs_qps(),
     transform = cross(
-      dataset_name = !!datasets,
-      difficulty_name = !!difficulties
+      dataset_name = !!datasets
+      #difficulty_name = !!difficulties
     )
   ),
   
-  figure_recall_vs_qps = target(
-    ggsave(
-      filename = here("imgs", str_c(dataset_name, "-", difficulty_name, ".png")),
-      plot = plot_recall_vs_qps
-    ),
-    transform = map(plot_recall_vs_qps)
+  plot_recall_vs_qps_paper = target(
+    averages_recoded %>% 
+      filter(dataset %in% c("GLOVE", "SIFT"), 
+             algorithm != "bruteforce-blas",
+             difficulty != "diverse") %>% 
+      do_plot_recall_vs_qps_paper(),
   ),
+  
+  figure_recall_vs_qps_paper = {
+    tikz(file = here("imgs", "recall-vs-qps.tex"),
+         width = 5.5, height = 4)
+    print(plot_recall_vs_qps_paper)
+    dev.off()
+  },
+  
+  plot_all_datasets_paper = averages_recoded %>% 
+    filter(algorithm %in% c("ONNG", "Annoy"),
+           dataset %in% c("GLOVE", "SIFT", "GLOVE-2M")) %>% 
+    do_plot_recall_vs_qps_all_datasets(),
+    
+  figure_all_datasets_paper = {
+    tikz(file = here("imgs", "datasets-comparison.tex"),
+         width = 5.5, height = 4)
+    print(plot_all_datasets_paper)
+    dev.off()
+  },
+  
+  #figure_recall_vs_qps = target(
+  #  ggsave(
+  #    filename = here("imgs", str_c(dataset_name, "-", difficulty_name, ".png")),
+  #    plot = plot_recall_vs_qps
+  #  ),
+  #  transform = map(plot_recall_vs_qps)
+  #),
   
   # ------- Distribution plots ----------
   expansion_scores_part = target(
@@ -87,6 +129,19 @@ plan <- drake_plan(
     transform = combine(expansion_scores_part)
   ),
   
+  expansion_50_scores_part = target(
+    read_delim(expansion_50_file,
+               col_types = "id",
+               col_names = c("id", "expansion_50"),
+               delim = " ") %>% 
+      mutate(dataset = expansion_50_file %>% str_remove("-50")),
+    transform = map(expansion_50_file = !!expansion_50_files)
+  ),
+  expansion_50_scores = target(
+    bind_rows(expansion_50_scores_part) %>% recode_datasets(),
+    transform = combine(expansion_50_scores_part)
+  ),
+  
   lid_scores_part = target(
     read_delim(lid_file,
                col_types = "id",
@@ -100,7 +155,8 @@ plan <- drake_plan(
     transform = combine(lid_scores_part)
   ),
   
-  difficulty_scores = inner_join(lid_scores, expansion_scores),
+  difficulty_scores = inner_join(lid_scores, expansion_scores) %>% 
+    inner_join(expansion_50_scores),
   
   scores_correlation = difficulty_scores %>% 
     group_by(dataset) %>% 
@@ -138,7 +194,7 @@ plan <- drake_plan(
   difficult_threshold_expansion = difficulty_scores %>% 
     group_by(dataset) %>% 
     arrange(expansion) %>% 
-    slice(n() - 10000) %>% 
+    slice(10000) %>% 
     transmute(hard_threshold = expansion) %>% 
     ungroup() %>% 
     inner_join(difficult_threshold_lid %>% rename(thresh_lid = hard_threshold)) %>% 
@@ -163,13 +219,15 @@ plan <- drake_plan(
                    size=1) +
       geom_label(aes(y=dataset_id + 0.3, label=dataset, x=120),
                  data=difficult_threshold_lid,
-                 hjust="right") +
+                 hjust="right",
+                 size = 3) +
       labs(y="",
            x="Local Intrinsic Dimensionality") +
       coord_cartesian(clip = "on") +
       theme_bw() +
       theme(axis.text.y = element_blank(),
-            axis.ticks.y = element_blank())
+            axis.ticks.y = element_blank(),
+            text = element_text(size=8))
   },
   
   density_plot_lid_tex = {
@@ -183,10 +241,10 @@ plan <- drake_plan(
     plot_data <- difficulty_scores %>% 
       group_by(dataset) %>% 
       arrange(expansion) %>% 
-      slice(1:(n()-100)) %>% 
       ungroup() %>% 
       inner_join(difficult_threshold_expansion) %>% 
-      mutate(dataset = fct_reorder(dataset, hard_threshold))
+      mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
+      filter(expansion <= 1.5)
     label_x <- plot_data %>% ungroup() %>% summarise(max(expansion)) %>% pull()
     ggplot(plot_data, aes(x=expansion, y=dataset_id, group=dataset)) +
       geom_density_ridges(scale=.95,
@@ -198,14 +256,16 @@ plan <- drake_plan(
                    size=1) +
       geom_label(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
                  data=difficult_threshold_expansion,
-                 hjust="right") +
-      scale_x_continuous(trans="log2") +
+                 hjust="right",
+                 size=3) +
+      scale_x_continuous(trans=log_trans(1.1), breaks=c(1,1.1,1.3,1.5)) +
       labs(y="",
            x="Expansion") +
       coord_cartesian(clip = "on") +
       theme_bw() +
       theme(axis.text.y = element_blank(),
-            axis.ticks.y = element_blank())
+            axis.ticks.y = element_blank(),
+            text = element_text(size=8))
   },
   
   density_plot_expansion_tex = {
@@ -290,18 +350,43 @@ plan <- drake_plan(
   
   # ------------------ Ranking ------------------------
   plot_ranking_qps = averages %>% 
-    filter(difficulty == "diverse") %>% 
+    filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
     filter(dataset != "fashion-mnist-784-euclidean") %>% 
     filter(difficulty_type == "lid") %>% 
+    ungroup() %>% 
+    recode_datasets() %>% 
     ranking_qps(),
   
+  plot_ranking_qps_expansion = averages %>% 
+    filter(difficulty == "middle") %>% 
+    filter(algorithm %in% algorithms) %>% 
+    filter(dataset != "fashion-mnist-784-euclidean") %>% 
+    filter(difficulty_type == "expansion") %>% 
+    ungroup() %>% 
+    recode_datasets() %>% 
+    ranking_qps(),
+  
+  ranking_qps_tex = {
+    tikz(here("imgs", "ranking-qps.tex"),
+         width=5.5, height=1.5)
+    print(plot_ranking_qps)
+    dev.off()
+  },
+  
   plot_ranking_distcomps = data_expansion %>% 
-    filter(difficulty == "diverse") %>% 
+    filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
     filter(dataset != "fashion-mnist-784-euclidean") %>% 
     filter(difficulty_type == "lid") %>% 
     ranking_distcomps(),
+  
+  ranking_distcomps_tex = {
+    tikz(here("imgs", "ranking-distcomps.tex"),
+         width=5.5, height=1.5)
+    print(plot_ranking_distcomps)
+    dev.off()
+  },
   
   # ------------------ How is the difficulty? --------------------
   
@@ -458,6 +543,13 @@ A line with a positive slope denotes that the algorithm is faster on the LID dat
   detail_to_plot = detail %>% 
     filter(dataset == "glove-100-angular",
            difficulty == "diverse"),
+  
+  detail_to_attach = detail %>% 
+    filter(dataset == "glove-100-angular",
+           difficulty_type == "lid",
+           parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)"),
+  
+  performance_with_score = attach_score_difficulty(detail_to_attach),
     
   recall_vs_lid_paper_1 = {
     tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
