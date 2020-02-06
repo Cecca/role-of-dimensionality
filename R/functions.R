@@ -527,14 +527,15 @@ ranking_distcomps <- function(averages) {
     mutate(dataset = str_remove(dataset, "-(angular|euclidean)")) %>% 
     mutate(dataset = factor(
       dataset,
-      levels = c("GLOVE", "GLOVE-2M", "SIFT", "MNIST", "Fashion-MNIST"),
+      levels = c("GLOVE", "GLOVE-2M", "GNEWS", "SIFT", "MNIST"),
       ordered = TRUE
     ))
   invalid <- averages %>%
     group_by(algorithm) %>% 
     summarise(min_distcomps = min(distcomps)) %>% 
     filter(min_distcomps == 0)
-  averages <- anti_join(averages, invalid)
+  averages <- anti_join(averages, invalid) %>% 
+    drop_na()
   config_75 <- averages %>% 
     group_by(dataset, algorithm) %>% 
     filter(`k-nn` >= 0.75) %>% 
@@ -552,6 +553,7 @@ ranking_distcomps <- function(averages) {
     mutate(algorithm = fct_reorder(algorithm, qps)) %>% 
     group_by(label, dataset) %>% 
     mutate(ratio_to_best = min(distcomps) / (distcomps))
+  print(ranked %>% filter(algorithm == "ONNG") %>% select(dataset, distcomps, ratio_to_best, count))
   
   labels <- tribble(
     ~algorithm, ~label_y,
@@ -612,8 +614,15 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
   print(bw)
   center <- detail_with_difficulty %>% 
     ggplot(aes(expansion, recall)) +
-    geom_bin2d(binwidth=c(bw, 0.1), show.legend = F) + 
+    #geom_bin2d(binwidth=c(bw, 0.1), show.legend = F) + 
+    stat_bin2d(#binwidth=c(bw, 0.1), 
+               bins = c(20, 10),
+               geom = "tile",
+               show.legend = F) +
     scale_fill_gradient(low='white', high='black') +
+    scale_x_continuous(trans="identity",
+                       limits = expansion_range) +
+    scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
     labs(caption=params) +
     theme_bw() +
@@ -648,11 +657,15 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
 
 do_plot_recall_vs_lid_single <- function(detail_with_difficulty) {
   params <- detail_with_difficulty %>% distinct(parameters) %>% pull()
-  bw <- detail_with_difficulty %>% select(lid) %>% max() / 10.0
+  bw <- detail_with_difficulty %>% select(lid) %>% max() / 20.0
   center <- detail_with_difficulty %>% 
     ggplot(aes(lid, recall)) +
-    geom_bin2d(binwidth=c(bw, 0.1), show.legend = F) + 
+    #geom_bin2d(binwidth=c(bw, 0.1), show.legend = F) + 
+    stat_bin2d(binwidth=c(bw, 0.1), 
+               geom = "tile",
+               show.legend = F) +
     scale_fill_gradient(low='white', high='black') +
+    scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
     labs(caption=params) +
     theme_bw() +
@@ -889,6 +902,52 @@ get_queryset_expansion <- function(dataset_name) {
     mutate(dataset = dataset_name)
 }
 
+arrow_plot <- function(data) {
+  data <- data %>% 
+    arrange(dataset, algorithm, difficulty) %>% 
+    recode_datasets() %>% 
+    mutate(difficulty_type = factor(difficulty_type, levels=c("lid", "expansion"), ordered = T)) %>% 
+    mutate(dataset = factor(
+      dataset,
+      levels = c("GLOVE", "GLOVE-2M", "GNEWS", "SIFT", "MNIST", "Fashion-MNIST"),
+      ordered = TRUE
+    ))
+  speed_drop <- data %>% 
+    filter(difficulty %in% c("easy", "hard")) %>% 
+    select(dataset, difficulty_type, difficulty, algorithm, qps) %>% 
+    spread(difficulty, qps) %>% 
+    mutate(speed_ratio = easy / hard,
+           x = "hard")
+  
+  data %>% 
+    ggplot(aes(x=difficulty, y=qps, color=algorithm, group=algorithm)) +
+    geom_line() +
+    geom_text_repel(aes(x=x, y=hard, label=scales::number(speed_ratio,
+                                                          big.mark = "",
+                                                          accuracy=1,
+                                                          suffix="x")),
+                    data=speed_drop,
+                    nudge_x      = 1,
+                    direction    = "y",
+                    hjust        = 0,
+                    segment.alpha = .5,
+                    segment.color = "black",
+                    size=2,
+                    show.legend = F) +
+    geom_point(size=.5) +
+    scale_y_log10() +
+    scale_x_discrete(limits=c("easy", "middle", "hard", "")) +
+    #scale_linetype_manual(values=c("expansion" = "dotted", "lid" = "solid")) +
+    labs(linetype = "Difficulty selection",
+         color = "Algorithm") +
+    facet_grid(vars(difficulty_type), vars(dataset)) +
+    theme_bw()  +
+    theme(legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
 
   
   

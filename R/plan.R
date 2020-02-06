@@ -25,7 +25,7 @@ lid_files <- list(
   "Sift" = "sift-128-euclidean-lid.txt"
 )
 
-datasets <- list(
+datasets_longname <- list(
   "fashion-mnist-784-euclidean",
   "glove-100-angular",
   "glove-2m-300-angular",
@@ -60,7 +60,8 @@ algorithms <- list(
 
 plan <- drake_plan(
   # ------- Performance plots ----------
-  data_expansion = load_results("res-with-expansion.csv.bz2") %>% 
+  #data_expansion = load_results("res-with-expansion.csv.bz2") %>% 
+  data_expansion = load_results("results-extended.csv.bz2") %>% 
     add_difficulty() %>% 
     recode_algos() %>% 
     recode_datasets(),
@@ -82,7 +83,7 @@ plan <- drake_plan(
   
   plot_recall_vs_qps_paper = target(
     averages_recoded %>% 
-      filter(dataset %in% c("GLOVE", "SIFT"), 
+      filter(dataset %in% c("GLOVE", "GLOVE-2M", "SIFT"), 
              algorithm != "bruteforce-blas",
              difficulty != "diverse") %>% 
       do_plot_recall_vs_qps_paper(),
@@ -277,7 +278,7 @@ plan <- drake_plan(
   
   # ------- Performance distribution scores ------------
   detail = target(
-    load_results("detail.csv.bz2") %>% 
+    load_results("detail-extended.csv.bz2") %>% 
       rename(algorithm = algo, parameters = params) %>% 
       recode_algos() %>% 
       add_difficulty() %>% 
@@ -294,7 +295,8 @@ plan <- drake_plan(
   #    filter(algorithm == algorithm_name,
   #           dataset == dataset_name,
   #           difficulty == difficulty_name,
-  #           difficulty_type == difficulty_type_name)
+  #           difficulty_type == difficulty_type_name) %>% 
+  #    recode_datasets()
   #  if (nrow(plot_data) > 0) {
   #    widget <- interactive_distribution_plot(plot_data)
   #    htmlwidgets::saveWidget(widget,
@@ -310,7 +312,7 @@ plan <- drake_plan(
   #  },
   #  transform = cross(
   #    algorithm_name = !!algorithms,
-  #    dataset_name = !!datasets,
+  #    dataset_name = !!datasets_longname,
   #    difficulty_name = !!difficulties,
   #    difficulty_type_name = c("expansion", "lid")
   #  )
@@ -320,6 +322,13 @@ plan <- drake_plan(
     filter(dataset == "glove-2m-300-angular",
            difficulty == "middle",
            difficulty_type == "lid"),
+  
+  plot_performance_distribution_recall_diverse = detail %>% 
+    filter(dataset == "glove-2m-300-angular",
+           difficulty == "diverse",
+           difficulty_type == "lid") %>% 
+    filter(algorithm %in% algorithms) %>% 
+    static_ridges_plot_qps(),
   
   plot_performance_distribution_recall = {
     #tikz(file = file_out("imgs/distribution_recall.tex"), width = 8, height = 4)
@@ -378,7 +387,7 @@ plan <- drake_plan(
     filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
     filter(dataset != "fashion-mnist-784-euclidean") %>% 
-    filter(difficulty_type == "lid") %>% 
+    filter(difficulty_type == "expansion") %>% 
     ranking_distcomps(),
   
   ranking_distcomps_tex = {
@@ -407,133 +416,31 @@ plan <- drake_plan(
       qps = 1/mean(query_time)
     ) %>% ungroup(),
   
-  fast_lid = avg_lid %>% 
-    group_by(dataset, difficulty, algorithm) %>% 
+  fast_accurate = averages %>% 
+    filter(algorithm != "bruteforce-blas") %>% 
+    filter(difficulty != "diverse") %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
     filter(recall >= 0.9) %>% 
-    slice(which.max(qps)),
-  
-  fast_expansion = avg_expansion %>% 
-    group_by(dataset, difficulty, algorithm) %>% 
-    filter(recall >= 0.9) %>% 
-    slice(which.max(qps)),
-  
-  difficulty_comparison = inner_join(fast_lid, 
-                                     fast_expansion, 
-                                     by=c("dataset", "difficulty", "algorithm"),
-                                     suffix=c("_lid", "_expansion")) %>% 
-    mutate(delta_qps = qps_lid - qps_expansion,
-           ratio_qps = qps_expansion / qps_lid) %>% 
-    ungroup(),
-    
-  plot_difficulty_comparison_data = difficulty_comparison %>% 
-    mutate(x = fct_reorder(interaction(factor(dataset), factor(algorithm)),
-                           ratio_qps),
-           sign = if_else(ratio_qps < 1, "LID", "Expansion")),
-  
-  plot_difficulty_comparison = plot_difficulty_comparison_data %>% 
-    ggplot(aes(algorithm, ratio_qps, fill=sign)) +
-    geom_col_interactive(aes(tooltip=str_c("lid: ", qps_lid, " exp: ", qps_expansion,
-                                           " param_lid: ", parameters_lid,
-                                           " param_exp: ", parameters_expansion))) +
-    geom_hline(yintercept = 1) +
-    scale_fill_manual(values=c("LID" = "red", "Expansion" = "blue")) +
-    labs(fill="On which dataset algorithms are faster?",
-         y="qps_expansion / qps_lid") +
-    coord_flip() +
-    facet_grid(vars(dataset), vars(difficulty), scales="free_y") +
-    theme_bw() +
-    theme(legend.position = "bottom"),
- 
-  figure_difficulty_comparison = ggsave(
-    filename = "difficulty-comparison.png",
-    plot = plot_difficulty_comparison,
-    width = 10,
-    height = 5,
-  ),
-  
-  figure_difficulty_comparison_html = girafe(ggobj = plot_difficulty_comparison) %>% 
-    htmlwidgets::saveWidget("difficulty-comparison.html"),
-  
-  plot_difficulty_comparison_slope = difficulty_comparison %>% 
-    mutate(
-      dataset = str_remove(dataset, "-(angular|euclidean)"),
-      slope = qps_expansion / qps_lid,
-      slopesign = if_else(slope <= 1,
-                          "LID",
-                          "Expansion")
-    ) %>% 
-    ggplot(aes(group=algorithm,
-               tooltip=str_c(algorithm, "\n",
-                             "performance ratio: ", slope),
-               data_id=algorithm)) +
-    geom_point_interactive(aes(y=qps_lid, x="LID", color=slopesign)) +
-    geom_point_interactive(aes(y=qps_expansion, x="Expansion", color=slopesign)) +
-    geom_segment_interactive(aes(x="Expansion", xend="LID",
-                             y=qps_expansion, yend=qps_lid,
-                             color=slopesign)) +
-    #scale_y_log10() +
-    facet_grid(vars(difficulty), vars(dataset), scales='free') +
-    labs(x="",
-         y="Queries per second",
-         title="Comparison of performance",
-         subtitle="On datasets generated wrt LID or Expansion, at 0.9 recall",
-         caption="How to read: each line represents the best configuration of the algorithm with >0.9 recall.
-A line with a positive slope denotes that the algorithm is faster on the LID dataset.",
-         color="Which dataset\nis easier?",
-         shape="Algorithm") +
-    theme_bw(),
- 
-  figure_difficulty_comparison_slope_html = girafe(ggobj = plot_difficulty_comparison_slope,
-                                                   width_svg = 10,
-                                                   height_svg = 8,
-                                                   options = list(
-                                                     opts_hover("stroke-width:3")
-                                                   )) %>% 
-    htmlwidgets::saveWidget("difficulty-comparison-slope.html"),
- 
-  # ----- Alternative difficulty comparison ------
-  #
-  # Performed by taking, for algorithms that attain at least .9 recall, the fastest configuration
-  # on average on both datasets. For those not getting to .9, we get the configuration offering the
-  # highest average recall between the two configurations
-  data_alternative_difficulty_comparison = inner_join(avg_lid, avg_expansion,
-                                                      by=c("dataset", "difficulty", "algorithm", "parameters"),
-                                                      suffix = c("_lid", "_exp")) %>% 
-    mutate(combined_recall = pmin(recall_lid, recall_exp),
-           combined_qps = pmin(qps_lid, qps_exp)) %>% 
-    mutate(larger_than_9 = combined_recall >= 0.9) %>% 
-    group_by(dataset, difficulty, algorithm, larger_than_9) %>% 
-    slice(if_else(larger_than_9,
-                  which.max(combined_qps),
-                  which.max(combined_recall))) %>% 
-    group_by(dataset, difficulty, algorithm) %>% 
-    slice(which.max(combined_qps)),
- 
-  plot_difficulty_comparison_alternative = data_alternative_difficulty_comparison %>% 
-    mutate(delta_qps = qps_lid - qps_exp,
-           ratio_qps = qps_exp / qps_lid,
-           sign = if_else(ratio_qps < 1, "LID", "Expansion")) %>% 
+    slice(which.max(qps)) %>% 
     ungroup() %>% 
-    ggplot(aes(algorithm, ratio_qps, fill=sign)) +
-    geom_col_interactive(aes(tooltip=str_c("qps_lid: ", number(qps_lid), " qps_exp: ", number(qps_exp),
-                                           "\nrecall_lid: ", number(recall_lid, accuracy=0.01), " recall_exp: ", number(recall_exp, accuracy = 0.01),
-                                           "\nparams: ", parameters))) +
-    geom_hline(yintercept = 1) +
-    scale_fill_manual(values=c("LID" = "red", "Expansion" = "blue")) +
-    scale_y_continuous(trans="log2") +
-    labs(fill="On which dataset algorithms are faster?",
-         y="log2(qps_expansion / qps_lid)",
-         caption = "The configuration of each algorithm is the same on both datasets.
-         For algorithms with parameter configurations achieveing at least 0.9 recall on both datasets, 
-         the fastest such configuration is selected. For the others, the configuration
-         achieving the highest minimum recall is selected.") +
-    coord_flip() +
-    facet_grid(vars(dataset), vars(difficulty), scales="free_y") +
-    theme_bw() +
-    theme(legend.position = "top"),
- 
-  figure_difficulty_comparison_alternative_html = girafe(ggobj = plot_difficulty_comparison_alternative) %>% 
-    htmlwidgets::saveWidget("difficulty-comparison-alternative.html"),
+    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
+  
+  moving_configurations = averages %>% 
+    semi_join(filter(fast_accurate, difficulty == "easy"), 
+              by=c("dataset", "difficulty_type", "algorithm", "parameters")) %>% 
+    ungroup() %>% 
+    filter(difficulty != "diverse") %>% 
+    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
+  
+  fast_accurate_arrow_plot = fast_accurate %>% 
+    arrow_plot(),
+  
+  fast_accurate_plot_paper = {
+    tikz(here("imgs", "fast-accurate.tex"),
+         width = 5.5, height = 3)
+    print(fast_accurate_arrow_plot)
+    dev.off()
+  },
   
   # ----------- Recall vs. difficulty ------------
   
@@ -552,28 +459,28 @@ A line with a positive slope denotes that the algorithm is faster on the LID dat
   performance_with_score = attach_score_difficulty(detail_to_attach),
     
   recall_vs_lid_paper_1 = {
-    tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
-         width = 2.25, height = 2.25)
+    #tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
+    #     width = 2.25, height = 2.25)
     p <- detail_to_plot %>% 
       filter(difficulty_type == "lid",
              parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
       bind_cols(queries_glove_100_diverse_lid) %>% 
       do_plot_recall_vs_lid_single()
-    print(p)
-    dev.off()
+    #print(p)
+    #dev.off()
   },
   
   recall_vs_expansion_paper_1 = {
-    tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
-         width = 2.25, height = 2.25)
+    #tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
+    #     width = 2.25, height = 2.25)
     p <- detail_to_plot %>% 
       filter(difficulty_type == "expansion",
              parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
       bind_cols(queries_glove_100_diverse_expansion) %>% 
       filter(expansion <= 1.1) %>% 
       do_plot_recall_vs_expansion_single()
-    print(p)
-    dev.off()
+    #print(p)
+    #dev.off()
   },
   
   qps_vs_lid_paper_1 = {
@@ -601,6 +508,12 @@ A line with a positive slope denotes that the algorithm is faster on the LID dat
     dev.off()
   },
   
+  # -------- Report ---------
+  report = rmarkdown::render(
+    knitr_in("report.Rmd"),
+    output_file = file_out("report.html"),
+    quiet = TRUE
+  )
   
 )
 
