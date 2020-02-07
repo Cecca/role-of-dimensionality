@@ -204,7 +204,7 @@ do_scatter_distribution <- function(data) {
 
 static_ridges_plot_recall <- function(algo_data) {
   averages <- algo_data %>%
-    group_by(algorithm, dataset, parameters) %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
     summarise(avg_time = mean(query_time), avg_recall=mean(recall)) %>%
     mutate(qps = 1/avg_time) %>% 
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
@@ -213,36 +213,46 @@ static_ridges_plot_recall <- function(algo_data) {
   all_points <- inner_join(algo_data, averages)
   
   ggplot(all_points, aes(x=recall, y=qps, group=parameters)) +
-    geom_density_ridges(alpha=0.4, scale=15, size=0.1, show.legend = F) +
+    geom_density_ridges(alpha=0.4, scale=15,
+                        size=0.1, show.legend = F) +
     geom_point(data=averages, 
                mapping=aes(x=avg_recall), 
                size=0.3,
                show.legend = F) +
     scale_y_log10() +
-    facet_wrap(vars(algorithm), ncol=5) +
+    facet_grid(vars(difficulty), vars(algorithm)) +
     labs(y="QPS (1/s)", 
          x="recall") +
     theme_bw()
 }
   
 static_ridges_plot_qps <- function(algo_data) {
+  dataset <- algo_data %>% distinct(dataset) %>% pull()
+  difficulty <- algo_data %>% distinct(difficulty) %>% pull()
+  difficulty_type <- algo_data %>% distinct(difficulty_type) %>% pull()
   averages <- algo_data %>%
-    group_by(algorithm, dataset, parameters) %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
     summarise(avg_time = mean(query_time), avg_recall=mean(recall)) %>%
     mutate(qps = 1/avg_time) %>% 
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
     psel(high(qps) * high(avg_recall))
   
   all_points <- inner_join(algo_data, averages)
+  print(count(all_points, algorithm, difficulty, avg_recall) %>% filter(algorithm == "FAI-IVF") %>% 
+          arrange(desc(avg_recall)))
   
-  ggplot(all_points, aes(x=1/avg_time, y=avg_recall, group=parameters)) +
-    geom_density_ridges(alpha=0.4, scale=15, size=0.1, show.legend = F) +
+  ggplot(all_points, aes(x=1/query_time, 
+                         y=avg_recall,
+                         group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=15,
+                        size=0.1, show.legend = F) +
     geom_point(data=averages, 
                mapping=aes(x=qps), 
                size=0.3,
                show.legend = F) +
     scale_x_log10() + 
-    facet_wrap(vars(algorithm), ncol=5, scales="free_x") +
+    scale_y_continuous(labels=c("0", "0.3", "0.6", "0.9", "")) +
+    facet_grid(vars(difficulty), vars(algorithm), scales="free_x") +
     labs(x="QPS (1/s)", 
          y="recall") +
     theme_bw()
@@ -377,6 +387,7 @@ interactive_distribution_plot <- function(algo_data) {
     mutate(qps = 1/avg_time) %>% 
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
     psel(high(qps) * high(avg_recall))
+  print(averages)
   
   plot_data <- algo_data %>%
     inner_join(averages,
@@ -404,7 +415,7 @@ interactive_distribution_plot <- function(algo_data) {
     geom_point_interactive(data=sized_points,
                            mapping=aes(recall, binned_qps, data_id=parameters, size=bin_count),
                            alpha=0.0) +
-    scale_x_continuous(limits = c(0,1)) +
+    scale_x_continuous(limits = c(0,1), trans="exp") +
     scale_y_continuous(limits = c(ymin, ymax)) +
     guides(size=FALSE)+
     labs(title=str_interp("${dataset} ${difficulty} - ${algorithm}"),

@@ -118,6 +118,21 @@ Hash: 77a82ae397d1011a20ea8bfc36332526
 Requires: backports, dplyr, generics, purrr, reshape2, stringr, tibble,
     tidyr
 
+Package: bsselectR
+Source: github
+Version: 0.1.0
+Hash: 1aa72e8ba78dcbd913bf74746cea8509
+Requires: htmltools, htmlwidgets, rmarkdown
+GithubRepo: bsselectR
+GithubUsername: walkerke
+GithubRef: master
+GithubSha1: c196e8f6e8e4f1907db893737e5949fb099d4cce
+RemoteHost: api.github.com
+RemoteRepo: bsselectR
+RemoteUsername: walkerke
+RemoteRef: master
+RemoteSha: c196e8f6e8e4f1907db893737e5949fb099d4cce
+
 Package: callr
 Source: CRAN
 Version: 3.4.0

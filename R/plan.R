@@ -283,52 +283,45 @@ plan <- drake_plan(
       recode_algos() %>% 
       add_difficulty() %>% 
       mutate(recall = recall / 10) %>% 
-      select(dataset, difficulty, algorithm, parameters, recall, query_time, difficulty_type),
+      select(dataset, difficulty, algorithm, parameters, recall, query_time, difficulty_type) %>% 
+      recode_datasets(),
     format = "fst"
   ),
   averages = detail %>% 
     group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
     summarise(qps = 1/mean(query_time), recall = mean(recall)),
   
-  #figure_distribution = target({
-  #  plot_data <- detail %>%
-  #    filter(algorithm == algorithm_name,
-  #           dataset == dataset_name,
-  #           difficulty == difficulty_name,
-  #           difficulty_type == difficulty_type_name) %>% 
-  #    recode_datasets()
-  #  if (nrow(plot_data) > 0) {
-  #    widget <- interactive_distribution_plot(plot_data)
-  #    htmlwidgets::saveWidget(widget,
-  #                            here("imgs", str_c("perf-distribution-",
-  #                                               algorithm_name, "-",
-  #                                               dataset_name, "-",
-  #                                               difficulty_name, "-",
-  #                                               difficulty_type_name,
-  #                                               ".html")))
-  #  } else {
-  #    print(paste("Skipping dataset", dataset_name, difficulty_name, algorithm_name))
-  #  }
-  #  },
-  #  transform = cross(
-  #    algorithm_name = !!algorithms,
-  #    dataset_name = !!datasets_longname,
-  #    difficulty_name = !!difficulties,
-  #    difficulty_type_name = c("expansion", "lid")
-  #  )
-  #),
+  figure_distribution = target({
+    plot_data <- detail %>%
+      filter(algorithm == algorithm_name,
+             dataset == dataset_name,
+             difficulty == difficulty_name,
+             difficulty_type == difficulty_type_name)
+    #if (nrow(plot_data) > 0) {
+    interactive_distribution_plot(plot_data)
+    #  htmlwidgets::saveWidget(widget,
+    #                          here("imgs", str_c("perf-distribution-",
+    #                                             algorithm_name, "-",
+    #                                             dataset_name, "-",
+    #                                             difficulty_name, "-",
+    #                                             difficulty_type_name,
+    #                                             ".html")))
+    #} else {
+    #  print(paste("Skipping dataset", dataset_name, difficulty_name, algorithm_name))
+    #}
+    },
+    transform = cross(
+      algorithm_name = !!algorithms,
+      dataset_name = !!datasets,
+      difficulty_name = !!difficulties,
+      difficulty_type_name = c("expansion", "lid")
+    )
+  ),
   
   data_performance_distribution_paper = detail %>% 
-    filter(dataset == "glove-2m-300-angular",
-           difficulty == "middle",
+    filter(dataset == "GLOVE-2M",
+           difficulty %in% c("middle", "diverse"),
            difficulty_type == "lid"),
-  
-  plot_performance_distribution_recall_diverse = detail %>% 
-    filter(dataset == "glove-2m-300-angular",
-           difficulty == "diverse",
-           difficulty_type == "lid") %>% 
-    filter(algorithm %in% algorithms) %>% 
-    static_ridges_plot_qps(),
   
   plot_performance_distribution_recall = {
     #tikz(file = file_out("imgs/distribution_recall.tex"), width = 8, height = 4)
@@ -336,32 +329,26 @@ plan <- drake_plan(
       filter(algorithm %in% algorithms) %>% 
       static_ridges_plot_recall()
     ggsave("imgs/distribution_recall.pdf", plot=p,
-           width = 8, height=3)
+           width = 8, height=4)
     #dev.off()
   },
   
-  plot_performance_distribution_qps = {
-    #tikz(file = file_out("imgs/distribution_qps.tex"), width = 8, height = 4)
-    p <- data_performance_distribution_paper %>% 
+  plot_performance_distribution_qps = data_performance_distribution_paper %>% 
       filter(algorithm %in% algorithms) %>% 
-      static_ridges_plot_qps()
-    ggsave("imgs/distribution_qps.pdf", plot=p,
-           width = 8, height=3)
+      static_ridges_plot_qps(),
+  
+  figure_performance_distribution_qps = {
+    #tikz(file = file_out("imgs/distribution_qps.tex"), width = 8, height = 4)
+    ggsave("imgs/distribution_qps.pdf", plot=plot_performance_distribution_qps,
+           width = 8, height=4)
     #dev.off()
   },
-  
-  figure_performance_distribution_paper = target(
-    {
-      #data_performance_distribution_paper %>% 
-      #  composed_performance_distribution()
-    }
-  ),
   
   # ------------------ Ranking ------------------------
   plot_ranking_qps = averages %>% 
     filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
-    filter(dataset != "fashion-mnist-784-euclidean") %>% 
+    filter(dataset != "Fashion-MNIST") %>% 
     filter(difficulty_type == "lid") %>% 
     ungroup() %>% 
     recode_datasets() %>% 
@@ -370,7 +357,7 @@ plan <- drake_plan(
   plot_ranking_qps_expansion = averages %>% 
     filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
-    filter(dataset != "fashion-mnist-784-euclidean") %>% 
+    filter(dataset != "Fashion-MNIST") %>% 
     filter(difficulty_type == "expansion") %>% 
     ungroup() %>% 
     recode_datasets() %>% 
@@ -386,7 +373,7 @@ plan <- drake_plan(
   plot_ranking_distcomps = data_expansion %>% 
     filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
-    filter(dataset != "fashion-mnist-784-euclidean") %>% 
+    filter(dataset != "Fashion-MNIST") %>% 
     filter(difficulty_type == "expansion") %>% 
     ranking_distcomps(),
   
@@ -448,26 +435,26 @@ plan <- drake_plan(
   queries_glove_100_diverse_expansion = get_queryset_expansion("glove-100-angular"),
   
   detail_to_plot = detail %>% 
-    filter(dataset == "glove-100-angular",
+    filter(dataset == "GLOVE",
            difficulty == "diverse"),
   
   detail_to_attach = detail %>% 
-    filter(dataset == "glove-100-angular",
+    filter(dataset == "GLOVE",
            difficulty_type == "lid",
            parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)"),
   
-  performance_with_score = attach_score_difficulty(detail_to_attach),
+  #performance_with_score = attach_score_difficulty(detail_to_attach),
     
   recall_vs_lid_paper_1 = {
-    #tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
-    #     width = 2.25, height = 2.25)
+    tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
+         width = 2.25, height = 2.25)
     p <- detail_to_plot %>% 
       filter(difficulty_type == "lid",
              parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
       bind_cols(queries_glove_100_diverse_lid) %>% 
       do_plot_recall_vs_lid_single()
-    #print(p)
-    #dev.off()
+    print(p)
+    dev.off()
   },
   
   recall_vs_expansion_paper_1 = {

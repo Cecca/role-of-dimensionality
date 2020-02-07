@@ -1,0 +1,36 @@
+---
+title: "Report"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r echo=F}
+knitr::opts_chunk$set(echo = F,
+                      message = F,
+                      warning = F)
+#source("R/packages.R")
+```
+
+# Performance distribution {.tabset .tabset-fade}
+
+{{#datasets}}
+## {{dataset}} {.tabset .tabset-fade}
+
+{{#types}}
+### {{type}} {.tabset .tabset-fade}
+
+{{#difficulties}}
+#### {{difficulty}} {.tabset .tabset-fade}
+
+{{#algorithms}}
+##### {{algorithm}} {.tabset .tabset-fade}
+
+```{r}
+readd(figure_distribution_{{algorithm_esc}}_{{dataset_esc}}_{{difficulty}}_{{type}})
+```
+
+{{/algorithms}}
+{{/difficulties}}
+{{/types}}
+{{/datasets}}
