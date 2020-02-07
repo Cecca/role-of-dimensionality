@@ -27,7 +27,7 @@ knitr::opts_chunk$set(echo = F,
 ##### {{algorithm}} {.tabset .tabset-fade}
 
 ```{r}
-readd(figure_distribution_{{algorithm_esc}}_{{dataset_esc}}_{{difficulty}}_{{type}})
+readd(plot_distribution_{{algorithm_esc}}_{{dataset_esc}}_{{difficulty}}_{{type}})
 ```
 
 {{/algorithms}}

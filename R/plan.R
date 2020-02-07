@@ -291,13 +291,12 @@ plan <- drake_plan(
     group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
     summarise(qps = 1/mean(query_time), recall = mean(recall)),
   
-  figure_distribution = target({
+  plot_distribution = target({
     plot_data <- detail %>%
       filter(algorithm == algorithm_name,
              dataset == dataset_name,
              difficulty == difficulty_name,
              difficulty_type == difficulty_type_name)
-    #if (nrow(plot_data) > 0) {
     interactive_distribution_plot(plot_data)
     #  htmlwidgets::saveWidget(widget,
     #                          here("imgs", str_c("perf-distribution-",
@@ -318,19 +317,28 @@ plan <- drake_plan(
     )
   ),
   
+  figure_distribution = target(
+    htmlwidgets::saveWidget(plot_distribution,
+                            here("imgs", str_c("perf-distribution-",
+                                               dataset_name, "-",
+                                               difficulty_name, "-",
+                                               difficulty_type_name, "-",
+                                               algorithm_name,
+                                               ".html"))),
+    transform = map(plot_distribution)
+  ),
+  
   data_performance_distribution_paper = detail %>% 
     filter(dataset == "GLOVE-2M",
            difficulty %in% c("middle", "diverse"),
            difficulty_type == "lid"),
   
   plot_performance_distribution_recall = {
-    #tikz(file = file_out("imgs/distribution_recall.tex"), width = 8, height = 4)
     p <- data_performance_distribution_paper %>%
       filter(algorithm %in% algorithms) %>% 
       static_ridges_plot_recall()
     ggsave("imgs/distribution_recall.pdf", plot=p,
            width = 8, height=4)
-    #dev.off()
   },
   
   plot_performance_distribution_qps = data_performance_distribution_paper %>% 
@@ -338,10 +346,8 @@ plan <- drake_plan(
       static_ridges_plot_qps(),
   
   figure_performance_distribution_qps = {
-    #tikz(file = file_out("imgs/distribution_qps.tex"), width = 8, height = 4)
     ggsave("imgs/distribution_qps.pdf", plot=plot_performance_distribution_qps,
            width = 8, height=4)
-    #dev.off()
   },
   
   # ------------------ Ranking ------------------------
@@ -496,11 +502,11 @@ plan <- drake_plan(
   },
   
   # -------- Report ---------
-  report = rmarkdown::render(
-    knitr_in("report.Rmd"),
-    output_file = file_out("report.html"),
-    quiet = TRUE
-  )
+  #report = rmarkdown::render(
+  #  knitr_in("report.Rmd"),
+  #  output_file = file_out("report.html"),
+  #  quiet = TRUE
+  #)
   
 )
 

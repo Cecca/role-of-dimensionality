@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <title>Distribution plots</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+    integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <!-- Bootstrap -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+    integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+    crossorigin="anonymous"></script>
+  <style>
+    body {
+      padding-top: 50px;
+    }
+  </style>
+  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+          <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+          <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+
+  <nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="index.html">ANN Benchmarks</a>
+      </div>
+      <div id="navbar" class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="index.html">Home</a></li>
+        </ul>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="index.html#datasets">Datasets</a></li>
+        </ul>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="index.html#algorithms">Algorithms</a></li>
+        </ul>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="index.html#contact">Contact</a></li>
+        </ul>
+      </div>
+      <!--/.nav-collapse -->
+    </div>
+  </nav>
+
+
+  <div>
+    <span>Algorithm</span>
+    <select id="select-algorithm" onchange="update_plot(true)">
+      <option value="faiss">FAI-IVF</option>
+      <option value="hnsw">HNSW</option>
+      <option value="annoy">Annoy</option>
+      <option value="onng">ONNG</option>
+      <option value="puffinn">PUFFINN</option>
+    </select>
+  </div>
+  <div>
+    <span>Dataset</span>
+    <select id="select-dataset" onchange="update_plot(false)">
+      <option value="Fashion.MNIST">Fashion-MNIST</option>
+      <option value="GLOVE.2M">GLOVE-2M</option>
+      <option value="GLOVE">GLOVE</option>
+      <option value="MNIST">MNIST</option>
+      <option value="SIFT">SIFT</option>
+    </select>
+  </div>
+  <div>
+    <span>Difficulty</span>
+    <select id="select-difficulty" onchange="update_plot(false)">
+      <option value="easy">Easy</option>
+      <option value="middle">Middle</option>
+      <option value="hard">Hard</option>
+      <option value="diverse">Diverse</option>
+    </select>
+  </div>
+  <div>
+    <span>Difficulty Type</span>
+    <select id="select-difficulty-type" onchange="update_plot(false)">
+      <option value="lid">LID</option>
+      <option value="expansion">Expansion</option>
+    </select>
+  </div>
+
+  <iframe id="plot-content" src="" style="height:600px;width:1000px;"></iframe>
+
+  <div id="contact">
+    <h2>Contact</h2>
+    <p>ANN-Benchmarks has been developed by Martin Aumueller (maau@itu.dk), Erik Bernhardsson (mail@erikbern.com), and
+      Alec Faitfull (alef@itu.dk). Please use
+      <a href="https://github.com/erikbern/ann-benchmarks/">Github</a> to submit your implementation or improvements.
+    </p>
+  </div>
+  </div>
+  <script>
+    var current_algorithm = null;
+    function get_file_name() {
+      var algo_name = {
+        'annoy': 'Annoy',
+        'faiss': 'FAI.IVF',
+        'hnsw': 'HNSW',
+        'onng': 'ONNG',
+        'puffinn': 'PUFFINN'
+      };
+      var algo = algo_name[document.querySelector("#select-algorithm").value];
+      var dataset = document.querySelector("#select-dataset").value;
+      var difficulty = document.querySelector("#select-difficulty").value;
+      var difficulty_type = document.querySelector("#select-difficulty-type").value;
+
+      return "imgs/perf-distribution-" + dataset + "-" + difficulty + "-" + difficulty_type + "-" + algo + ".html";
+    }
+
+    function update_image() {
+      var filename = get_file_name();
+      console.log("loading " + filename);
+      var plot_container = document.getElementById("plot-content");
+      plot_container.src = filename;
+      // var image = document.getElementById("plot-image");
+      // image.src = filename;
+    }
+
+    function update_plot(update_params) {
+      console.log("Updating the plot");
+      update_image();
+    }
+
+    // Initialize
+    update_plot(true);
+  </script>
+</body>
+
+</html>
