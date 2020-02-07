@@ -1,28 +1,30 @@
 import math
 import sys
 import h5py
+import numpy
 
 f = h5py.File(sys.argv[1])
 
-distances = []
-
-for dist in f['distances']:
-    distances.append(dist)
+distances = numpy.array(f['distances'])
 
 estimates = []
 
-for vec in distances:
+for i, vec in enumerate(distances):
+    if i % 10000 == 0:
+        print(i)
     vec.sort()
     w = vec[-1]
-    lid = 0.0
+    half_w = 0.5 * w
+    s = 0.0
+    valid = 0
     for v in vec:
-        if v > 0.0001:
-            lid += math.log(v / w)
-    if lid > -0.1 and lid < 0.1:
-        continue
-    lid /= len(vec)
-    lid = -1 / lid
-    estimates.append(lid)
+        if v > 0.:
+            if v < half_w:
+                s += math.log(v / w)
+            else:
+                s += numpy.log1p((v - w) / w)
+            valid += 1
+    estimates.append(-valid / s)
 
 for i,e in enumerate(estimates):
     print(i, e)
