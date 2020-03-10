@@ -41,7 +41,7 @@ diverse = list(map(int, lines[7].strip()[1:-1].split(",")))
 # make four different versions containing the different querysets
 
 def create_dataset(f, train, nn, dd, l, name, difficulty_type):
-    g = h5py.File(fn.replace('.hdf5','') + 'new-{}-{}.hdf5'.format(name, difficulty_type), 'w')
+    g = h5py.File(fn.replace('.hdf5','') + '-{}-{}.hdf5'.format(name, difficulty_type), 'w')
 
     g.attrs['distance'] = f.attrs['distance']
     g.attrs['point_type'] = f.attrs['point_type']

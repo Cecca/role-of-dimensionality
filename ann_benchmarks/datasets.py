@@ -3,6 +3,7 @@ import numpy
 import os
 import random as rand
 import sys
+from ann_benchmarks.distance import metrics
 from math import sqrt
 try:
     from urllib import urlretrieve
@@ -41,7 +42,7 @@ def get_dataset(which):
 # You probably never need to do this at home, just rely on the prepared datasets at http://ann-benchmarks.com
 
 def write_output(train, test, fn, distance, point_type='float', count=100):
-    from ann_benchmarks.algorithms.bruteforce import BruteForceBLAS
+    import faiss
     test = train
     n = 0
     f = h5py.File(fn, 'w')
@@ -53,16 +54,15 @@ def write_output(train, test, fn, distance, point_type='float', count=100):
     f.create_dataset('test', (len(test), len(test[0])), dtype=test.dtype)[:] = test
     neighbors = f.create_dataset('neighbors', (len(test), count), dtype='i')
     distances = f.create_dataset('distances', (len(test), count), dtype='f')
-    bf = BruteForceBLAS(distance, precision=train.dtype)
-    bf.fit(train)
-    queries = []
-    for i, x in enumerate(test):
-        if i % 1000 == 0:
-            print('%d/%d...' % (i, test.shape[0]))
-        res = list(bf.query_with_distances(x, count))
-        res.sort(key=lambda t: t[-1])
-        neighbors[i] = [j for j, _ in res]
-        distances[i] = [d for _, d in res]
+    index = faiss.IndexFlatL2(len(train[0]))
+    #bf = BruteForceBLAS(distance, precision=train.dtype)
+    #bf.fit(train)
+    index.add(train.astype(numpy.float32))
+    D, I = index.search(test.astype(numpy.float32), count)
+    for i in range(len(D)):
+        neighbors[i] = numpy.array(I[i])
+        if distance == 'euclidean':
+            distances[i] = numpy.array([sqrt(d) for d in D[i]])
     f.close()
 
 
@@ -86,8 +86,8 @@ def glove(out_fn, d):
         for line in z.open(z_fn):
             v = [float(x) for x in line.strip().split()[1:]]
             X.append(numpy.array(v))
-        X_train, X_test = train_test_split(numpy.array(X))
-        write_output(numpy.array(X_train), numpy.array(X_test), out_fn, 'angular')
+        #X_train, X_test = train_test_split(numpy.array(X))
+        write_output(numpy.array(X), numpy.array(X), out_fn, 'angular')
 
 
 def _load_texmex_vectors(f, n, k):
@@ -170,7 +170,7 @@ def mnist(out_fn):
     download('http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz', 'mnist-test.gz')
     train = _load_mnist_vectors('mnist-train.gz')
     test = _load_mnist_vectors('mnist-test.gz')
-    write_output(train, test, out_fn, 'euclidean')
+    write_output(train, train, out_fn, 'euclidean')
 
 
 def fashion_mnist(out_fn):
@@ -178,7 +178,7 @@ def fashion_mnist(out_fn):
     download('http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz', 'fashion-mnist-test.gz')
     train = _load_mnist_vectors('fashion-mnist-train.gz')
     test = _load_mnist_vectors('fashion-mnist-test.gz')
-    write_output(train, test, out_fn, 'euclidean')
+    write_output(train, train, out_fn, 'euclidean')
 
 
 def transform_bag_of_words(filename, n_dimensions, out_fn):
