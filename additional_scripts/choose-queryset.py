@@ -5,15 +5,18 @@ import argparse
 random.seed(12341)
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('difficulty', metavar='FILE',
-                    help='the file containing the difficulty of queries, either LID or expansion')
+                    help='the file containing the difficulty of queries, either LID, expansion, or LRC')
 parser.add_argument('--expansion', action='store_true',
                     help='the file contains expansion instead of LID')
+parser.add_argument('--contrast', action='store_true',
+                    help='the file contains LRC instead of LID')
 
 #fn = sys.argv[1]
 args = parser.parse_args()
 fn = args.difficulty
 use_expansion = args.expansion
-print(fn, use_expansion)
+use_rc = args.contrast
+#print(fn, use_expansion)
 
 estimates = []
 
@@ -25,7 +28,7 @@ with open(fn) as f:
         except:
             pass
 
-estimates.sort(key=lambda x: x[-1], reverse=use_expansion)
+estimates.sort(key=lambda x: x[-1], reverse=use_expansion or use_rc)
 easy = estimates[:10000]
 middle = estimates[len(estimates) // 2 - 5000:len(estimates) // 2 + 5000]
 hard = estimates[-10000:]
@@ -62,7 +65,7 @@ def choose_expansion_diverse(estimates):
     print("Diverse: %f" % (sum(map(lambda x: estimates[x][-1], dataset)) / 5000))
     print(dataset)
 
-if use_expansion:
+if use_expansion or use_rc:
     choose_expansion_diverse(estimates)
 else:
     choose_lid_diverse(estimates)

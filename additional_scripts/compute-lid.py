@@ -3,6 +3,9 @@ import sys
 import h5py
 import numpy
 
+# LID computation taken from
+# https://github.com/elki-project/elki/blob/master/elki-core-math/src/main/java/elki/math/statistics/intrinsicdimensionality/HillEstimator.java.
+
 f = h5py.File(sys.argv[1])
 
 distances = numpy.array(f['distances'])
@@ -10,15 +13,13 @@ distances = numpy.array(f['distances'])
 estimates = []
 
 for i, vec in enumerate(distances):
-    if i % 10000 == 0:
-        print(i)
     vec.sort()
     w = vec[-1]
     half_w = 0.5 * w
     s = 0.0
     valid = 0
     for v in vec:
-        if v > 0.:
+        if v > 1e-5:
             if v < half_w:
                 s += math.log(v / w)
             else:
