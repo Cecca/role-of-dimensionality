@@ -43,6 +43,7 @@ def get_dataset(which):
 
 def write_output(train, test, fn, distance, point_type='float', count=100):
     import faiss
+    import sklearn.preprocessing
     test = train
     n = 0
     f = h5py.File(fn, 'w')
@@ -54,6 +55,9 @@ def write_output(train, test, fn, distance, point_type='float', count=100):
     f.create_dataset('test', (len(test), len(test[0])), dtype=test.dtype)[:] = test
     neighbors = f.create_dataset('neighbors', (len(test), count), dtype='i')
     distances = f.create_dataset('distances', (len(test), count), dtype='f')
+    if distance == 'angular':
+        train = sklearn.preprocessing.normalize(train, axis=1, norm='l2')
+        test = train
     index = faiss.IndexFlatL2(len(train[0]))
     #bf = BruteForceBLAS(distance, precision=train.dtype)
     #bf.fit(train)
@@ -63,11 +67,12 @@ def write_output(train, test, fn, distance, point_type='float', count=100):
         neighbors[i] = numpy.array(I[i])
         if distance == 'euclidean':
             distances[i] = numpy.array([sqrt(d) for d in D[i]])
+        if distance == 'angular':
+            distances[i] = numpy.array([d/2 for d in D[i]])
     f.close()
 
 
 def train_test_split(X, test_size=10000):
-    import sklearn.model_selection
     return X, X
     #print('Splitting %d*%d into train/test' % X.shape)
     #return sklearn.model_selection.train_test_split(X, test_size=test_size, random_state=rand.randrange(1, 1000000))
