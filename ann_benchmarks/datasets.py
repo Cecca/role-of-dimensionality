@@ -77,6 +77,20 @@ def train_test_split(X, test_size=10000):
     #print('Splitting %d*%d into train/test' % X.shape)
     #return sklearn.model_selection.train_test_split(X, test_size=test_size, random_state=rand.randrange(1, 1000000))
 
+def gnews(out_fn): 
+    import gensim
+
+    url = 'https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz'
+    fn = os.path.join('data', 'GoogleNews-vectors-negative300.bin.gz')
+    download(url, fn)
+    print("Loading GNews vectors")
+    model = gensim.models.KeyedVectors.load_word2vec_format(fn, binary=True)
+    X = []
+    for word in model.vocab.keys():
+        X.append(model[word])
+    print("Writing output")
+    write_output(numpy.array(X), numpy.array(X), out_fn, 'angular')
+
 def glove2m(out_fn):
     import zipfile
 
@@ -360,6 +374,7 @@ DATASETS = {
     'glove-100-angular': lambda out_fn: glove(out_fn, 100),
     'glove-200-angular': lambda out_fn: glove(out_fn, 200),
     'glove-2m-300-angular': lambda out_fn: glove2m(out_fn),
+    'gnews-300-angular': lambda out_fn: gnews(out_fn),
     'mnist-784-euclidean': mnist,
     'random-xs-20-euclidean': lambda out_fn: random(out_fn, 20, 10000, 100, 'euclidean'),
     'random-s-100-euclidean': lambda out_fn: random(out_fn, 100, 100000, 1000, 'euclidean'),
