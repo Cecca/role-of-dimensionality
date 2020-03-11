@@ -77,6 +77,20 @@ def train_test_split(X, test_size=10000):
     #print('Splitting %d*%d into train/test' % X.shape)
     #return sklearn.model_selection.train_test_split(X, test_size=test_size, random_state=rand.randrange(1, 1000000))
 
+def glove2m(out_fn):
+    import zipfile
+
+    url = 'http://nlp.stanford.edu/data/glove.840B.300d.zip'
+    fn = os.path.join('data', 'glove.840B.300d.zip')
+    download(url, fn)
+    with zipfile.ZipFile(fn) as z:
+        print('preparing %s' % out_fn)
+        z_fn = 'glove.840B.300d.txt'
+        X = []
+        for line in z.open(z_fn):
+            v = [float(x) for x in line.strip().split()[1:]]
+            X.append(numpy.array(v))
+        write_output(numpy.array(X), numpy.array(X), out_fn, 'angular')
 
 def glove(out_fn, d):
     import zipfile
@@ -345,6 +359,7 @@ DATASETS = {
     'glove-50-angular': lambda out_fn: glove(out_fn, 50),
     'glove-100-angular': lambda out_fn: glove(out_fn, 100),
     'glove-200-angular': lambda out_fn: glove(out_fn, 200),
+    'glove-2m-300-angular': lambda out_fn: glove2m(out_fn),
     'mnist-784-euclidean': mnist,
     'random-xs-20-euclidean': lambda out_fn: random(out_fn, 20, 10000, 100, 'euclidean'),
     'random-s-100-euclidean': lambda out_fn: random(out_fn, 100, 100000, 1000, 'euclidean'),
