@@ -9,14 +9,19 @@ parser.add_argument('queryfile', metavar='FILE',
                     help='the text file containing queries')
 parser.add_argument('--expansion', action='store_true',
                     help='the queries are selected by their expansion')
-parser.add_argument('--contrast', action='store_true',
-                    help='the file contains LRC instead of LID')
+parser.add_argument('--rc', action='store_true',
+                    help='the queries are selected by their RC')
+parser.add_argument('--lid', action='store_true',
+                    help='the queries are selected by their LID')
 args = parser.parse_args()
 
 fn = args.datafile # sys.argv[1]
 gn = args.queryfile # sys.argv[2]
 use_expansion = args.expansion
-use_rc = args.contrast
+use_rc = args.rc
+use_lid = args.lid
+
+assert use_expansion or use_rc or use_lid
 
 # read h5py file completely
 f = h5py.File(fn)

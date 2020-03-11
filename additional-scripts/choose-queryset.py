@@ -7,16 +7,21 @@ parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('difficulty', metavar='FILE',
                     help='the file containing the difficulty of queries, either LID, expansion, or LRC')
 parser.add_argument('--expansion', action='store_true',
-                    help='the file contains expansion instead of LID')
-parser.add_argument('--contrast', action='store_true',
-                    help='the file contains LRC instead of LID')
+                    help='the file contains expansion')
+parser.add_argument('--rc', action='store_true',
+                    help='the file contains LRC')
+parser.add_argument('--lid', action='store_true',
+                    help='the file contains LID')
 
 #fn = sys.argv[1]
 args = parser.parse_args()
 fn = args.difficulty
 use_expansion = args.expansion
-use_rc = args.contrast
+use_rc = args.rc
+use_lid = args.lid
 #print(fn, use_expansion)
+
+assert use_expansion or use_rc or use_lid
 
 estimates = []
 
