@@ -526,7 +526,8 @@ static_ridges_plot_qps <- function(algo_data) {
     psel(high(qps) * high(avg_recall))
   
   all_points <- inner_join(algo_data, averages)
-  print(count(all_points, algorithm, difficulty, avg_recall) %>% filter(algorithm == "FAI-IVF") %>% 
+  print(count(all_points, algorithm, difficulty, avg_recall) %>% 
+          filter(algorithm == "IVF") %>% 
           arrange(desc(avg_recall)))
   
   ggplot(all_points, aes(x=1/query_time, 
@@ -778,7 +779,7 @@ ranking_qps <- function(averages) {
     ~algorithm, ~label_y,
     "ONNG", 0.98,
     "HNSW", 0.55,
-    "FAI-IVF", 0.25,
+    "IVF", 0.25,
     "Annoy", 0.15,
     "PUFFINN", 0.03
   ) %>% 
@@ -796,8 +797,8 @@ ranking_qps <- function(averages) {
                size=2) +
     scale_y_continuous(position = "left",
                        trans= scales::log_trans(base = 2),
-                       breaks =c(1, 0.5, 0.25, 0.1),
-                       labels = c("best", "1/2 qps", "1/4 qps", "1/10 qps")) +
+                       breaks =c(1, 0.5, 0.25, 0.1, 0.01),
+                       labels = c("best", "1/2 qps", "1/4 qps", "1/10 qps", "1/100 qps")) +
     scale_color_algo() +
     facet_wrap(vars(label), ncol=2) +
     coord_cartesian(clip="off") +
@@ -866,7 +867,7 @@ ranking_distcomps <- function(averages) {
     "ONNG", 0.97,
     "HNSW", 0.55,
     "Annoy", 0.15,
-    "FAI-IVF", 0.05,
+    "IVF", 0.05,
     "PUFFINN", 0.25
   ) %>% 
     mutate(algorithm = factor(algorithm)) %>% 
@@ -888,8 +889,8 @@ ranking_distcomps <- function(averages) {
                size=2) +
     scale_y_continuous(position = "left",
                        trans= scales::log_trans(base = 2),
-                       breaks =c(1, 0.5, 0.25, 0.1),
-                       labels = c("best", "2x dists", "4x dists", "10x dists")) +
+                       breaks =c(1, 0.5, 0.25, 0.1, 0.01),
+                       labels = c("best", "2x dists", "4x dists", "10x dists", "100x dists")) +
     scale_color_algo() +
     facet_wrap(vars(label), ncol=2) +
     coord_cartesian(clip="off") +
