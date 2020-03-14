@@ -17,22 +17,36 @@ rc_files <- list(
 )
 
 lid_files <- list(
-  "Fashion-mnist" = "fashion-mnist-784-euclidean-new-lid.txt",
-  "Glove-100" = "glove-100-angular-new-lid.txt",
-  "Glove-2m" = "glove-2m-300-angular-new-lid.txt",
-  "GNews" = "gnews-300-angular-new-lid.txt",
-  "Mnist" = "mnist-784-euclidean-new-lid.txt",
-  "Sift" = "sift-128-euclidean-new-lid.txt"
+  "fashion-mnist-784-euclidean-lid.txt",
+  "glove-100-angular-lid.txt",
+  "glove-2m-300-angular-lid.txt",
+  "gnews-300-angular-lid.txt",
+  "mnist-784-euclidean-lid.txt",
+  "sift-128-euclidean-lid.txt"
 )
 
-lid_files_10 <- list(
-  "fashion-mnist-784-euclidean-lid-k10.txt",
-  "glove-100-angular-lid-k10.txt",
-  "glove-2m-300-angular-lid-k10.txt",
-  "gnews-300-angular-lid-k10.txt",
-  "mnist-784-euclidean-lid-k10.txt",
-  "sift-128-euclidean-lid-k10.txt"
-)
+# Check that files are all there
+for (f in lid_files) {
+  if (!file.exists(here(f))) {
+    stop("Missing LID file")
+  }
+}
+for (f in expansion_files) {
+  if (!file.exists(here(f))) {
+    stop("Missing Expansion file")
+  }
+}
+for (f in lrc_files) {
+  if (!file.exists(here(f))) {
+    stop("Missing RC file")
+  }
+}
+if (!file.exists("detail.parquet")) {
+  stop("Missing detail.parquet file")
+}
+if (!file.exists(here("summarised.csv.bz2"))) {
+  stop("Missing summarised.csv.bz2 file")
+}
 
 datasets <- list(
   "GLOVE-2M",
