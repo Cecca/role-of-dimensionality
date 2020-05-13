@@ -1,7 +1,7 @@
 Benchmarking nearest neighbors
 ==============================
 
-This is the version of http://github.com/erikbern/ann-benchmarks/ accompanying our SISAP 2019 paper _Benchmarking Nearest Neighbor Search: Influence of Local Intrinsic Dimensionality_. 
+This is the version of http://github.com/erikbern/ann-benchmarks/ accompanying our paper _Benchmarking Nearest Neighbor Search: Influence of Local Dimensionality Measures_. 
 See the main repository for the benchmarking tool intended for use for a general audience. 
 
 
@@ -35,10 +35,15 @@ First, you have to export the results:
 Then you have to setup your `R` installation. Open an `R` shell and type `packrat::restore()`.
 At this point you can run the analysis and plotting pipeline by just typing `make`
 
-SISAP 2019 Changes
+Running All Experiments
 =====
 
-See http://ann-benchmarks.com/sisap19/ for the evaluation including plots, preprocessed datasets, and raw results.
+To re-run the complete set of experiments, use `make install & make run`.
+
+Changes
+=====
+
+See https://cecca.github.io/role-of-dimensionality-site/ for the evaluation including plots, preprocessed datasets, and raw results.
 
 Generating the datasets described in the paper works as follows. (We use `glove-100-angular` as an example.)
 
