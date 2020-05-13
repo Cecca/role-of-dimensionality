@@ -1,7 +1,7 @@
 Benchmarking nearest neighbors
 ==============================
 
-This is the version of http://github.com/erikbern/ann-benchmarks/ accompanying our paper _Benchmarking Nearest Neighbor Search: Influence of Local Dimensionality Measures_. 
+This is the version of http://github.com/erikbern/ann-benchmarks/ accompanying our paper [_The Role of Local Dimensionality Measures in Benchmarking Nearest Neighbor Search_](https://cecca.github.io/role-of-dimensionality-site/paper.pdf). 
 See the main repository for the benchmarking tool intended for use for a general audience. 
 
 
@@ -55,19 +55,6 @@ Generating the datasets described in the paper works as follows. (We use `glove-
 - Run `python3 plot.py --dataset glove-100-angular-diverse` to create a basic recall/QPS plot. (If your docker service runs as root, you might need to execute this script as root as well since it will write to the result files in `results/glove-100-angular-diverse`. Alternatively: Change owner of files in `results` to your local user.) 
 - Or use `python3 data_export.py --output results.csv --detail` to generate a CSV file with all metrics that can be used for visualization through Python/pandas or R. (Again: Might need to run as root.)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 Related Publication
 ==================
 
@@ -75,3 +62,5 @@ The following publication details design principles behind the benchmarking fram
 
 - M. Aumüller, E. Bernhardsson, A. Faithfull:
 [ANN-Benchmarks: A Benchmarking Tool for Approximate Nearest Neighbor Algorithms](http://www.itu.dk/people/maau/additional/sisap2017-preprint.pdf). SISAP 2017: 34-49
+- M. Aumüller, M. Ceccarello:
+[The Role of Local Intrinsic Dimensionality in Benchmarking Nearest Neighbor Search](https://arxiv.org/abs/1907.07387). SISAP 2019.
