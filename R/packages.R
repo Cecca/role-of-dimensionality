@@ -15,5 +15,6 @@ suppressPackageStartupMessages({
   library(see)
   library(tikzDevice)
   library(directlabels)
+  library(arrow)
 })
 

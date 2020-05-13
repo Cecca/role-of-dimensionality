@@ -23,4 +23,5 @@ imgs/
 *.Rproj
 
 .drake
+*.parquet
 

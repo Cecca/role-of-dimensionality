@@ -1,4 +1,4 @@
-plots: report.Rmd R/plan.R R/functions.R
+plots: R/plan.R R/functions.R
 	LANGUAGE=en Rscript make.R
 	
 report.Rmd: report.template R/render_template.R

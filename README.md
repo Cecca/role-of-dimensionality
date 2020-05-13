@@ -24,7 +24,16 @@ You can customize the algorithms and datasets if you want to:
 
 * Check that `algos.yaml` contains the parameter settings that you want to test
 * To run experiments on SIFT, invoke `python run.py --dataset glove-100-angular`. See `python run.py --help` for more information on possible settings. Note that experiments can take a long time. 
-* To process the results, either use `python plot.py --dataset glove-100-angular` or `python create_website.py`. An example call: `python create_website.py --plottype recall/time --latex --scatter --outputdir website/`. 
+
+Result processing
+=================
+
+First, you have to export the results: 
+* `python data_export.py --output summarised.csv.bz2`
+* `python data_export.py --output detail.parquet --detail`
+
+Then you have to setup your `R` installation. Open an `R` shell and type `packrat::restore()`.
+At this point you can run the analysis and plotting pipeline by just typing `make`
 
 SISAP 2019 Changes
 =====
@@ -39,7 +48,7 @@ Generating the datasets described in the paper works as follows. (We use `glove-
 - Run `python3 pick-queries.py data/glove-100-angular.hdf5 glove-100-angular-queries.txt` to prepare hdf5 versions of these 4 datasets. 
 - Run `python3 run.py --algorithm faiss-ivf --dataset glove-100-angular-diverse` (exchange algorithm and dataset accordingly) to run the experiments.
 - Run `python3 plot.py --dataset glove-100-angular-diverse` to create a basic recall/QPS plot. (If your docker service runs as root, you might need to execute this script as root as well since it will write to the result files in `results/glove-100-angular-diverse`. Alternatively: Change owner of files in `results` to your local user.) 
-- Or use `python3 to_csv.py --output results.csv --detail` to generate a CSV file with all metrics that can be used for visualization through Python/pandas or R. (Again: Might need to run as root.)
+- Or use `python3 data_export.py --output results.csv --detail` to generate a CSV file with all metrics that can be used for visualization through Python/pandas or R. (Again: Might need to run as root.)
 
 
 

@@ -8,7 +8,7 @@ scale_color_algo <- function() {
     "ONNG",
     "HNSW",
     "Annoy",
-    "FAI-IVF",
+    "IVF",
     "PUFFINN"
   )
   scale_color_manual(values=colors)
@@ -16,7 +16,12 @@ scale_color_algo <- function() {
 
 recode_datasets <- function(data) {
   data %>%
-    mutate(dataset = dataset %>% str_remove_all("-lid") %>% str_remove_all("-expansion") %>% str_remove_all(".txt")) %>% 
+    mutate(dataset = dataset %>% 
+             str_remove_all("-lid") %>% 
+             str_remove_all("-rc") %>% 
+             str_remove_all("-new") %>% 
+             str_remove_all("-expansion") %>% 
+             str_remove_all(".txt")) %>% 
     mutate(dataset = fct_recode(dataset,
       "GLOVE-2M" = "glove-2m-300-angular",
       "GNEWS" = "gnews-300-angular",
@@ -29,12 +34,14 @@ recode_datasets <- function(data) {
 
 add_difficulty <- function(detail_data) {
   pattern_get <- "(diverse|easy|middle|hard)"
-  pattern_rm <- "-(diverse|easy|middle|hard)(-expansion)?"
+  pattern_rm <- "-(diverse|easy|middle|hard)(-expansion|-lrc)?"
   detail_data %>% 
     mutate(difficulty = str_extract(dataset, pattern_get),
            difficulty_type = if_else(str_ends(dataset, "expansion"),
-                                       "expansion",
-                                       "lid"),
+                                     "expansion",
+                                     if_else(str_ends(dataset, "lrc"),
+                                             "lrc",
+                                             "lid")),
            dataset = str_remove(dataset, pattern_rm))
 }
 
@@ -42,7 +49,7 @@ recode_algos <- function(data) {
   data %>% 
     mutate(algorithm = recode_factor(algorithm,
       'annoy' = 'Annoy',
-      'faiss-ivf' = 'FAI-IVF',
+      'faiss-ivf' = 'IVF',
       'hnsw(faiss)' = 'HNSW',
       'NGT-onng' = 'ONNG',
       'puffinn' = "PUFFINN"
@@ -100,7 +107,11 @@ do_plot_recall_vs_qps <- function(data) {
   dataset <- data %>% select(dataset) %>% distinct() %>% pull() %>% as.character()
   frontier <- data %>% 
     group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-    psel(high(qps) * high(recall))
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard"),
+                               ordered = TRUE))
   frontier %>% 
     ggplot(aes(x=recall, y=qps, color=algorithm, group=interaction(algorithm, difficulty_type))) +
     geom_point() +
@@ -113,57 +124,306 @@ do_plot_recall_vs_qps <- function(data) {
     theme(legend.position = "bottom")
 }
 
-do_plot_recall_vs_qps_paper <- function(data) {
+do_plot_recall_vs_distcomps_paper <- function(data) {
   frontier <- data %>% 
     group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-    psel(high(qps) * high(recall))
+    psel(high(1/distcomps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard"),
+                               ordered = TRUE))
   frontier %>% 
-    ggplot(aes(x=recall, y=qps, color=algorithm, group=interaction(algorithm, difficulty_type))) +
+    ggplot(aes(x=recall, y=distcomps, color=algorithm, group=algorithm)) +
     geom_point(size=0.4) +
-    geom_line(aes(linetype=difficulty_type),
-              alpha=0.8) +
+    geom_line(alpha=0.8) +
     scale_x_continuous(trans=scales::exp_trans(base = 10),
                        breaks = c(0, .25, .5, .75, 1),
                        labels = c("0", "0.25", "0.5", "0.75", "1")) +
     scale_y_log10() +
-    scale_linetype_manual(values=c("expansion" = "dashed", "lid" = "solid")) +
-    labs(linetype = "Difficulty selection",
-         color = "Algorithm") +
+    #scale_linetype_manual(values=c("expansion" = "dashed", 
+    #                               "lid" = "solid",
+    #                               "lrc" = "dotted")) +
+    scale_color_algo() +
+    labs(#linetype = "Difficulty selection",
+         color = "Algorithm",
+         y="Distance computations") +
     facet_grid(vars(dataset), vars(difficulty)) +
     theme_bw()  +
     theme(legend.position = "top",
           legend.direction = "horizontal",
           legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
           text = element_text(size = 8),
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
-do_plot_recall_vs_qps_all_datasets <- function(data) {
+do_plot_recall_vs_qps_lid_paper <- function(data) {
   frontier <- data %>% 
     group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-    psel(high(qps) * high(recall))
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard"),
+                               ordered = TRUE))
   frontier %>% 
-    ggplot(aes(x=recall, y=qps, color=dataset, group=interaction(dataset, difficulty))) +
+    ggplot(aes(x=recall, y=qps, color=algorithm, group=algorithm)) +
     geom_point(size=0.4) +
-    geom_line(aes(linetype=difficulty),
-              alpha=0.8) +
+    geom_line(alpha=0.8) +
     scale_x_continuous(trans=scales::exp_trans(base = 10),
                        breaks = c(0, .25, .5, .75, 1),
                        labels = c("0", "0.25", "0.5", "0.75", "1")) +
     scale_y_log10() +
+    scale_color_algo() +
+    labs(color = "Algorithm") +
+    facet_grid(vars(dataset), vars(difficulty)) +
+    theme_bw()  +
+    theme(legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          #legend.background = element_rect(color="black"),
+          #legend.text = element_text(margin(t=0.1, b=0.1)),
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
+
+
+do_plot_recall_vs_qps_one_algo_paper <- function(data) {
+  frontier <- data %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard"),
+                               ordered = TRUE))
+  frontier %>% 
+    ggplot(aes(x=recall, y=qps, color=difficulty_type, group=difficulty_type)) +
+    geom_point(size=0.4) +
+    geom_line(alpha=0.8) +
+    scale_x_continuous(trans=scales::exp_trans(base = 10),
+                       breaks = c(0, .25, .5, .75, 1),
+                       labels = c("0", "0.25", "0.5", "0.75", "1")) +
+    scale_y_log10() +
+    scale_linetype_manual(values=c("expansion" = "dashed", 
+                                   "lid" = "solid",
+                                   "lrc" = "dotted")) +
+    labs(color = "Dimensionality measure") +
+    facet_grid(vars(dataset), vars(difficulty)) +
+    theme_bw()  +
+    theme(legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          #legend.background = element_rect(color="black"),
+          #legend.text = element_text(margin(t=0.1, b=0.1)),
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
+
+do_plot_sift_glove_paper <- function(data) {
+  frontier <- data %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("middle", "diverse", "hard"),
+                               ordered = TRUE))
+  
+  frontier %>% 
+    ggplot(aes(x=recall, y=qps, 
+               color=dataset, 
+               linetype=difficulty,
+               group=interaction(dataset, difficulty))) +
+    geom_point(size=0.2) +
+    geom_line(alpha=1) +
+    scale_x_continuous(trans=scales::exp_trans(base = 10),
+                       breaks = c(0, .5, .75, 1),
+                       labels = c("0", "0.5", "0.75", "1")) +
+    scale_y_log10() +
+    scale_linetype_manual(values=c(
+      "hard" = "dashed",
+      "middle" = "dotted",
+      "diverse" = "solid"
+    )) +
+    #scale_color_algo() +
+    scale_color_brewer(type="qual",
+                       palette = "Dark2") +
+    guides(linetype=FALSE)  +
+    labs(color = "Dataset",
+         linetype = "Difficulty") +
+    theme_bw()  +
+    theme(#legend.position = c(0.83, 0.2),
+          legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
+
+do_plot_mnist_paper <- function(data) {
+  frontier <- data %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("middle", "diverse", "hard"),
+                               ordered = TRUE))
+  
+  colors <- brewer_pal(type="qual", palette = "Dark2")(5)[3:4]
+  names(colors) <- c(
+    "Fashion-MNIST",
+    "MNIST"
+  )
+  
+  frontier %>% 
+    ggplot(aes(x=recall, y=qps, 
+               color=dataset, 
+               linetype=difficulty,
+               group=interaction(dataset, difficulty))) +
+    geom_point(size=0.2) +
+    geom_line(alpha=1) +
+    scale_x_continuous(trans=scales::exp_trans(base = 10),
+                       breaks = c(0, .5, .75, 1),
+                       labels = c("0", "0.5", "0.75", "1")) +
+    scale_y_log10() +
+    scale_linetype_manual(values=c(
+      "hard" = "dashed",
+      "middle" = "dotted",
+      "diverse" = "solid"
+    )) +
+    #scale_color_algo() +
+    scale_color_manual(values=colors) +
+    guides(linetype=FALSE)  +
+    labs(color = "Dataset",
+         linetype = "Difficulty") +
+    theme_bw()  +
+    theme(#legend.position = c(0.83, 0.2),
+          legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
+
+
+do_plot_recall_vs_distcomps_one_algo_paper <- function(data) {
+  frontier <- data %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    psel(low(distcomps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard"),
+                               ordered = TRUE))
+  frontier %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"),
+                               ordered = T)) %>% 
+    ggplot(aes(x=recall, y=distcomps, color=difficulty_type, group=difficulty_type)) +
+    geom_point(size=0.4) +
+    geom_line(alpha=0.8) +
+    scale_x_continuous(trans=scales::exp_trans(base = 10),
+                       breaks = c(0, .25, .5, .75, 1),
+                       labels = c("0", "0.25", "0.5", "0.75", "1")) +
+    scale_y_log10() +
+    scale_linetype_manual(values=c("expansion" = "dashed", 
+                                   "lid" = "solid",
+                                   "lrc" = "dotted")) +
+    labs(color = "Dimensionality measure") +
+    facet_grid(vars(dataset), vars(difficulty)) +
+    theme_bw()  +
+    theme(legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          #legend.background = element_rect(color="black"),
+          #legend.text = element_text(margin(t=0.1, b=0.1)),
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
+
+
+do_plot_recall_vs_qps_all_datasets <- function(data) {
+  frontier <- data %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("middle", "diverse", "hard"),
+                               ordered = TRUE))
+  frontier %>% 
+    ggplot(aes(x=recall, y=qps, 
+               color=dataset, 
+               linetype=difficulty,
+               group=interaction(difficulty, dataset))) +
+    #geom_point(size=0.2) +
+    geom_line(alpha=1) +
+    scale_x_continuous(trans=scales::exp_trans(base = 10),
+                       breaks = c(0, .5, .75, 1),
+                       labels = c("0", "0.5", "0.75", "1")) +
+    scale_y_log10() +
     scale_color_brewer(type="qual",
                        palette = "Dark2") +
     scale_linetype_manual(values=c(
-      "hard" = "solid",
-      "middle" = "dashed",
-      "easy" = "dotted",
-      "diverse" = "longdash"
+      "hard" = "dashed",
+      "middle" = "dotted",
+      "diverse" = "solid"
     )) +
-    labs(linetype = "Difficulty selection",
+    guides(linetype=FALSE) +
+    labs(#linetype = "Difficulty selection",
          color = "Dataset") +
-    facet_grid(vars(algorithm), vars(difficulty_type)) +
+    #facet_grid(vars(difficulty), vars(algorithm)) +
+    facet_wrap(vars(algorithm), ncol = 5) +
     theme_bw()  +
-    theme(legend.position = "top",
+    theme(#legend.position = c(0.83, 0.2),
+          legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+}
+
+do_plot_distcomps_vs_qps <- function(data) {
+  # We are insterested in a different layout of the points of the
+  # Recall/QPS plot, hence we select the same frontier
+  frontier <- data %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    psel(high(qps) * high(recall)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, 
+                               levels = c("easy", "middle", "hard"),
+                               ordered = TRUE))
+  frontier %>% 
+    ggplot(aes(x=qps, y=distcomps, color=algorithm, group=algorithm)) +
+    geom_point(size=0.4) +
+    geom_line(alpha=0.8) +
+    #scale_x_continuous(trans=scales::exp_trans(base = 10),
+    #                   breaks = c(0, .25, .5, .75, 1),
+    #                   labels = c("0", "0.25", "0.5", "0.75", "1")) +
+    scale_x_log10() +
+    scale_y_log10() +
+    scale_color_algo() +
+    labs(color = "Algorithm") +
+    facet_grid(vars(dataset), vars(difficulty)) +
+    theme_bw()  +
+    theme(#legend.position = c(0.83, 0.2),
+          legend.position = "top",
           legend.direction = "horizontal",
           legend.box = "vertical",
           text = element_text(size = 8),
@@ -171,28 +431,19 @@ do_plot_recall_vs_qps_all_datasets <- function(data) {
 }
 
 
-do_scatter_distribution <- function(data) {
+do_scatter_distribution_lid_exp <- function(data) {
   dataset <- data %>% head(1) %>% select(dataset) %>% pull()
-  correlation <- data %>% summarise(correlation = cor(lid, expansion)) %>% round(digits=3)
-  breakpoint <- 1.1
-  high_exp <- data %>% filter(expansion > breakpoint)
-  sample <- data %>% filter(expansion <= breakpoint) %>% sample_n(nrow(high_exp))
-  range_expansion <- data %>% select(expansion) %>% range()
-  range_lid <- data %>% select(lid) %>% range()
-  resolution_expansion <- (range_expansion[2] - range_expansion[1]) / 200
-  resolution_lid <- (range_lid[2] - range_lid[1]) / 200
+  #range_expansion <- data %>% select(expansion) %>% range()
+  #range_lid <- data %>% select(lid) %>% range()
   
-  scatter <- bind_rows(high_exp, sample) %>% 
-    #data %>% 
-    #mutate(
-    #  expansion = ceiling(expansion / resolution_expansion) * resolution_expansion,
-    #  lid = ceiling(lid / resolution_lid) * resolution_lid
-    #) %>% 
-    #count(expansion, lid) %>% 
+  scatter <- data %>% 
     ggplot(aes(x=lid, y=expansion)) +
+    scale_x_continuous(trans="log",
+                       labels=scales::number_format()) +
     scale_y_continuous(trans=log_trans(1.01),
-                       breaks=c(1,2,3,4,5,6,7)) +
-    geom_point(alpha=0.8) +
+                       labels=scales::number_format(accuracy=0.01))+
+                       #breaks=c(1,2,3,4,5,6,7)) +
+    geom_point(alpha=0.1) +
     scale_size_area() +
     #stat_smooth() +
     labs(x="Local Intrinsic Dimensionality",
@@ -201,6 +452,43 @@ do_scatter_distribution <- function(data) {
     theme(legend.position = 'bottom')
   scatter
 }
+
+do_scatter_distribution_lid_lrc <- function(data) {
+  dataset <- data %>% head(1) %>% select(dataset) %>% pull()
+  
+  scatter <- data %>% 
+    ggplot(aes(x=lid, y=rc)) +
+    scale_x_continuous(trans="log",
+                       labels=scales::number_format()) +
+    scale_y_continuous(trans="log",
+                       labels=scales::number_format(accuracy = 0.01)) +
+    geom_point(alpha=0.1) +
+    labs(x="Local Intrinsic Dimensionality",
+         y="Local Relative Contrast") +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  scatter
+}
+
+do_scatter_distribution_lrc_exp <- function(data) {
+  dataset <- data %>% head(1) %>% select(dataset) %>% pull()
+  
+  scatter <- data %>% 
+    ggplot(aes(x=expansion, y=rc)) +
+    geom_point(alpha=0.1) +
+    scale_y_continuous(trans="log",
+                       labels=scales::number_format(accuracy = 0.01)) +
+    scale_x_continuous(trans=log_trans(1.01),
+                       labels=scales::number_format(accuracy=0.01))+
+                       #breaks=c(1,2,3,4,5,6,7)) +
+    scale_size_area() +
+    labs(x="Expansion",
+         y="Local Relative Contrast") +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  scatter
+}
+
 
 static_ridges_plot_recall <- function(algo_data) {
   averages <- algo_data %>%
@@ -238,7 +526,8 @@ static_ridges_plot_qps <- function(algo_data) {
     psel(high(qps) * high(avg_recall))
   
   all_points <- inner_join(algo_data, averages)
-  print(count(all_points, algorithm, difficulty, avg_recall) %>% filter(algorithm == "FAI-IVF") %>% 
+  print(count(all_points, algorithm, difficulty, avg_recall) %>% 
+          filter(algorithm == "IVF") %>% 
           arrange(desc(avg_recall)))
   
   ggplot(all_points, aes(x=1/query_time, 
@@ -480,14 +769,18 @@ ranking_qps <- function(averages) {
   ranked <- bind_rows(config_75, config_9) %>% 
     mutate(algorithm = fct_reorder(algorithm, qps)) %>% 
     group_by(label, dataset) %>% 
-    mutate(ratio_to_best = qps / max(qps))
+    mutate(ratio_to_best = qps / max(qps)) %>% 
+    ungroup() %>% 
+    mutate(dataset = factor(dataset,
+                            levels=c("GLOVE", "GLOVE-2M", "GNEWS", "SIFT", "MNIST"),
+                            ordered = T))
   
   labels <- tribble(
     ~algorithm, ~label_y,
     "ONNG", 0.98,
-    "HNSW", 0.8,
-    "FAI-IVF", 0.35,
-    "Annoy", 0.2,
+    "HNSW", 0.55,
+    "IVF", 0.25,
+    "Annoy", 0.15,
     "PUFFINN", 0.03
   ) %>% 
     mutate(algorithm = factor(algorithm)) %>% 
@@ -497,17 +790,15 @@ ranking_qps <- function(averages) {
   ggplot(ranked, aes(x=dataset, y=ratio_to_best, color=algorithm)) +
     geom_point() +
     geom_line(aes(group=algorithm)) +
-    #geom_segment(data=labels,
-    #             mapping=(aes(x=0.9, xend="GLOVE",
-    #                          y=label_y, yend=ratio_to_best)),
-    #             linetype="dashed",
-    #             size=0.4)+
-    geom_label(data=labels,
+    geom_text(data=labels,
                mapping=aes(label=algorithm, y=label_y),
                x = 0.35,
                hjust="center",
                size=2) +
-    scale_y_continuous(position = "left") +
+    scale_y_continuous(position = "left",
+                       trans= scales::log_trans(base = 2),
+                       breaks =c(1, 0.5, 0.25, 0.1, 0.01),
+                       labels = c("best", "1/2 qps", "1/4 qps", "1/10 qps", "1/100 qps")) +
     scale_color_algo() +
     facet_wrap(vars(label), ncol=2) +
     coord_cartesian(clip="off") +
@@ -518,6 +809,8 @@ ranking_qps <- function(averages) {
                                             linetype = "dotted"),
           panel.grid.minor.y = element_blank(),
           panel.border = element_blank(),
+          strip.background = element_blank(),
+          strip.text = element_text(hjust=0),
           plot.title = element_text(size=rel(1)),
           legend.position='none',
           text = element_text(size = 8),
@@ -549,13 +842,13 @@ ranking_distcomps <- function(averages) {
     drop_na()
   config_75 <- averages %>% 
     group_by(dataset, algorithm) %>% 
-    filter(`k-nn` >= 0.75) %>% 
+    filter(recall >= 0.75) %>% 
     slice(which.min(distcomps)) %>% 
     mutate(label="Recall > 0.75") %>% 
     ungroup()
   config_9 <- averages %>% 
     group_by(dataset, algorithm) %>% 
-    filter(`k-nn` >= 0.9) %>% 
+    filter(recall >= 0.9) %>% 
     slice(which.min(distcomps)) %>% 
     mutate(label="Recall > 0.9") %>% 
     ungroup()
@@ -563,16 +856,19 @@ ranking_distcomps <- function(averages) {
     drop_na() %>% 
     mutate(algorithm = fct_reorder(algorithm, qps)) %>% 
     group_by(label, dataset) %>% 
-    mutate(ratio_to_best = min(distcomps) / (distcomps))
-  print(ranked %>% filter(algorithm == "ONNG") %>% select(dataset, distcomps, ratio_to_best, count))
+    mutate(ratio_to_best = min(distcomps) / (distcomps)) %>% 
+    ungroup() %>% 
+    mutate(dataset = factor(dataset,
+                            levels=c("GLOVE", "GLOVE-2M", "GNEWS", "SIFT", "MNIST"),
+                            ordered = T))
   
   labels <- tribble(
     ~algorithm, ~label_y,
     "ONNG", 0.97,
-    "HNSW", 0.75,
-    "Annoy", 0.2,
-    "FAI-IVF", 0.05,
-    "PUFFINN", 0.35
+    "HNSW", 0.55,
+    "Annoy", 0.15,
+    "IVF", 0.05,
+    "PUFFINN", 0.25
   ) %>% 
     mutate(algorithm = factor(algorithm)) %>% 
     mutate(label = "Recall > 0.9") %>% 
@@ -586,12 +882,15 @@ ranking_distcomps <- function(averages) {
     #                          y=label_y, yend=ratio_to_best)),
     #             linetype="dashed",
     #             size=0.4)+
-    geom_label(data=labels,
+    geom_text(data=labels,
                mapping=aes(label=algorithm, y=label_y),
                x=0.35,
                hjust="center",
                size=2) +
-    scale_y_continuous(position = "left") +
+    scale_y_continuous(position = "left",
+                       trans= scales::log_trans(base = 2),
+                       breaks =c(1, 0.5, 0.25, 0.1, 0.01),
+                       labels = c("best", "2x dists", "4x dists", "10x dists", "100x dists")) +
     scale_color_algo() +
     facet_wrap(vars(label), ncol=2) +
     coord_cartesian(clip="off") +
@@ -603,6 +902,8 @@ ranking_distcomps <- function(averages) {
           panel.grid.minor.y = element_blank(),
           panel.border = element_blank(),
           plot.title = element_text(size=rel(1)),
+          strip.background = element_blank(),
+          strip.text = element_text(hjust=0),
           text = element_text(size = 8),
           legend.position='none',
           axis.text.y.left = element_text(),
@@ -635,7 +936,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
                        limits = expansion_range) +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    labs(caption=params) +
+    #labs(caption=params) +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -665,6 +966,51 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
   ggdraw(p2)
 }
 
+do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
+  detail_with_difficulty <- filter(detail_with_difficulty, lrc <= 5)
+  params <- detail_with_difficulty %>% distinct(parameters) %>% pull()
+  bw <- detail_with_difficulty %>% select(lrc) %>% max() / 20.0
+  lrc_range <- detail_with_difficulty %>% select(lrc) %>% range()
+  center <- detail_with_difficulty %>% 
+    ggplot(aes(lrc, recall)) +
+    #geom_bin2d(binwidth=c(bw, 0.1), show.legend = F) + 
+    stat_bin2d(binwidth=c(bw, 0.1), 
+               geom = "tile",
+               show.legend = F) +
+    scale_fill_gradient(low='white', high='black') +
+    scale_size_area() +
+    #scale_x_log10() +
+    coord_cartesian(ylim = c(0,1)) +
+    #labs(caption=params) +
+    theme_bw() +
+    theme(legend.position = 'bottom',
+          plot.margin = unit(c(0,0,0,0), 'cm'),
+          panel.border = element_blank(),
+          axis.line = element_line(color='black'),
+          panel.grid = element_blank())
+  rc_dist <- ggplot(detail_with_difficulty, aes(x=lrc)) +
+    geom_density(aes(x=lrc, y=..ndensity..),
+                 fill='gray',
+                 alpha=0.3,
+                 color='black') +
+    coord_cartesian(xlim = lrc_range) +
+    theme_void()
+  recall_dist <- ggplot(detail_with_difficulty, aes(x=recall)) +
+    geom_density(aes(x=recall, y=..ndensity..),
+                 fill='gray', 
+                 alpha=0.3,
+                 color='black') +
+    coord_flip(xlim = c(0,1)) +
+    theme_void()
+    
+  p1 <- insert_xaxis_grob(center,
+                          rc_dist,
+                          position="top")
+  p2 <- insert_yaxis_grob(p1, recall_dist,
+                          position="right")
+  ggdraw(p2)
+}
+
 
 do_plot_recall_vs_lid_single <- function(detail_with_difficulty) {
   params <- detail_with_difficulty %>% distinct(parameters) %>% pull()
@@ -678,7 +1024,7 @@ do_plot_recall_vs_lid_single <- function(detail_with_difficulty) {
     scale_fill_gradient(low='white', high='black') +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    labs(caption=params) +
+    #labs(caption=params) +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -720,7 +1066,7 @@ do_plot_qps_vs_lid_single <- function(detail_with_difficulty) {
     geom_bin2d(binwidth=c(bw, bw_qps), show.legend = F) + 
     scale_fill_gradient(low='white', high='black') +
     coord_cartesian(ylim = range_qps) +
-    labs(caption=params,
+    labs(#caption=params,
          y="QPS") +
     theme_bw() +
     theme(legend.position = 'bottom',
@@ -884,8 +1230,22 @@ attach_score_difficulty <- function(data) {
 
 get_queryset_lid <- function(dataset_name) {
   lids <- read_delim(paste0(str_replace(dataset_name, "-diverse(-2)?", ""),
-                            "-lid.txt"), 
+                            "-new-lid.txt"), 
                      delim = " ", col_names = c("identifier","lid"))
+  con <- file(paste0(dataset_name, "-queries.txt"))
+  diverse <- jsonlite::fromJSON(readLines(con)[8])
+  close(con)
+  # Offset by 1 the indices because the file contains 0-based indices, the tibbles have 1 based indices
+  result_lids <- lids %>% slice(diverse + 1)
+  print(head(result_lids))
+  result_lids %>% 
+    mutate(dataset = dataset_name)
+}
+
+get_queryset_lrc <- function(dataset_name) {
+  lids <- read_delim(paste0(str_replace(dataset_name, "-diverse(-2)?", ""),
+                            "-rc.txt"), 
+                     delim = " ", col_names = c("identifier","rc"))
   con <- file(paste0(dataset_name, "-queries.txt"))
   diverse <- jsonlite::fromJSON(readLines(con)[8])
   close(con)
@@ -894,6 +1254,7 @@ get_queryset_lid <- function(dataset_name) {
   result_lids %>% 
     mutate(dataset = dataset_name)
 }
+
 
 get_queryset_expansion <- function(dataset_name) {
   # TODO: The last row should not be part of the tibble
@@ -916,13 +1277,18 @@ get_queryset_expansion <- function(dataset_name) {
 arrow_plot <- function(data) {
   data <- data %>% 
     arrange(dataset, algorithm, difficulty) %>% 
-    recode_datasets() %>% 
-    mutate(difficulty_type = factor(difficulty_type, levels=c("lid", "expansion"), ordered = T)) %>% 
+    #recode_datasets() %>% 
+    #mutate(difficulty_type = factor(difficulty_type, levels=c("LID", "RC", "Expansion"), ordered = T)) %>% 
+    mutate(difficulty_type = factor(difficulty_type, levels=c("lid", "lrc", "expansion"), ordered = T)) %>% 
     mutate(dataset = factor(
       dataset,
       levels = c("GLOVE", "GLOVE-2M", "GNEWS", "SIFT", "MNIST", "Fashion-MNIST"),
       ordered = TRUE
-    ))
+    )) %>% 
+    mutate(difficulty_type = recode_factor(difficulty_type,
+                                           "lid" = "LID",
+                                           "lrc" = "RC",
+                                           "expansion" = "Expansion"))
   speed_drop <- data %>% 
     filter(difficulty %in% c("easy", "hard")) %>% 
     select(dataset, difficulty_type, difficulty, algorithm, qps) %>% 
@@ -956,6 +1322,10 @@ arrow_plot <- function(data) {
     theme(legend.position = "top",
           legend.direction = "horizontal",
           legend.box = "vertical",
+          legend.box.margin = margin(0,0,0,0),
+          legend.box.spacing = unit(c(0,0,0,0), "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          axis.text.x = element_text(angle=45),
           text = element_text(size = 8),
           plot.margin = unit(c(0,0,0,0), "cm"))
 }

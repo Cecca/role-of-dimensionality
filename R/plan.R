@@ -1,38 +1,52 @@
 expansion_files <- list(
-  "Fashion-mnist" = "fashion-mnist-784-euclidean-expansion.txt",
-  "Glove-100" = "glove-100-angular-expansion.txt",
-  "Glove-2m" = "glove-2m-300-angular-expansion.txt",
-  "GNews" = "gnews-300-angular-expansion.txt",
-  "Mnist" = "mnist-784-euclidean-expansion.txt",
-  "Sift" = "sift-128-euclidean-expansion.txt"
+  "fashion-mnist-784-euclidean-expansion.txt",
+  "glove-100-angular-expansion.txt",
+  "glove-2m-300-angular-expansion.txt",
+  "gnews-300-angular-expansion.txt",
+  "mnist-784-euclidean-expansion.txt",
+  "sift-128-euclidean-expansion.txt"
 )
 
-expansion_50_files <- list(
-  "fashion-mnist-784-euclidean-expansion-50.txt",
-  "glove-100-angular-expansion-50.txt",
-  "glove-2m-300-angular-expansion-50.txt",
-  "gnews-300-angular-expansion-50.txt",
-  "mnist-784-euclidean-expansion-50.txt",
-  "sift-128-euclidean-expansion-50.txt"
+rc_files <- list(
+  "fashion-mnist-784-euclidean-rc.txt",
+  "glove-100-angular-rc.txt",
+  "glove-2m-300-angular-rc.txt",
+  "gnews-300-angular-rc.txt",
+  "mnist-784-euclidean-rc.txt",
+  "sift-128-euclidean-rc.txt"
 )
 
 lid_files <- list(
-  "Fashion-mnist" = "fashion-mnist-784-euclidean-lid.txt",
-  "Glove-100" = "glove-100-angular-lid.txt",
-  "Glove-2m" = "glove-2m-300-angular-lid.txt",
-  "GNews" = "gnews-300-angular-lid.txt",
-  "Mnist" = "mnist-784-euclidean-lid.txt",
-  "Sift" = "sift-128-euclidean-lid.txt"
+  "fashion-mnist-784-euclidean-lid.txt",
+  "glove-100-angular-lid.txt",
+  "glove-2m-300-angular-lid.txt",
+  "gnews-300-angular-lid.txt",
+  "mnist-784-euclidean-lid.txt",
+  "sift-128-euclidean-lid.txt"
 )
 
-datasets_longname <- list(
-  "fashion-mnist-784-euclidean",
-  "glove-100-angular",
-  "glove-2m-300-angular",
-  "gnews-300-angular",
-  "mnist-784-euclidean",
-  "sift-128-euclidean"
-)
+# Check that files are all there
+for (f in lid_files) {
+  if (!file.exists(here(f))) {
+    stop("Missing LID file")
+  }
+}
+for (f in expansion_files) {
+  if (!file.exists(here(f))) {
+    stop("Missing Expansion file")
+  }
+}
+for (f in lrc_files) {
+  if (!file.exists(here(f))) {
+    stop("Missing RC file")
+  }
+}
+if (!file.exists("detail.parquet")) {
+  stop("Missing detail.parquet file")
+}
+if (!file.exists(here("summarised.csv.bz2"))) {
+  stop("Missing summarised.csv.bz2 file")
+}
 
 datasets <- list(
   "GLOVE-2M",
@@ -54,22 +68,33 @@ algorithms <- list(
   "PUFFINN",
   "ONNG",
   "HNSW",
-  "FAI-IVF",
+  "IVF",
   "Annoy"
 )
 
 plan <- drake_plan(
-  # ------- Performance plots ----------
-  #data_expansion = load_results("res-with-expansion.csv.bz2") %>% 
-  data_expansion = load_results("results-extended.csv.bz2") %>% 
-    add_difficulty() %>% 
-    recode_algos() %>% 
-    recode_datasets(),
+  # ------- Data --------
+  summarized = load_results("summarised.csv.bz2"),
+  
+  detail = target(
+    read_parquet("detail.parquet"),
+    format="fst"
+  ),
+  
+  averages = detail %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
+    summarise(qps = 1/mean(query_time), recall = mean(recall)),
+  
+  distcomps = summarized %>% 
+    select(dataset, difficulty, difficulty_type, algorithm, parameters, distcomps),
   
   averages_recoded = averages %>% ungroup() %>% recode_datasets() %>% 
     mutate(difficulty = factor(difficulty, 
                                levels = c("easy", "middle", "hard", "diverse"),
-                               ordered = TRUE)),
+                               ordered = TRUE)) %>% 
+    inner_join(distcomps),
+  
+  # ------- Performance plots ----------
   
   plot_recall_vs_qps = target(
     averages_recoded %>% 
@@ -77,44 +102,124 @@ plan <- drake_plan(
       do_plot_recall_vs_qps(),
     transform = cross(
       dataset_name = !!datasets
-      #difficulty_name = !!difficulties
     )
   ),
   
-  plot_recall_vs_qps_paper = target(
+  plot_recall_vs_qps_lid_paper = target(
     averages_recoded %>% 
       filter(dataset %in% c("GLOVE", "GLOVE-2M", "SIFT"), 
              algorithm != "bruteforce-blas",
+             difficulty_type == "lid",
              difficulty != "diverse") %>% 
-      do_plot_recall_vs_qps_paper(),
+      do_plot_recall_vs_qps_lid_paper(),
   ),
   
-  figure_recall_vs_qps_paper = {
-    tikz(file = here("imgs", "recall-vs-qps.tex"),
-         width = 5.5, height = 4)
-    print(plot_recall_vs_qps_paper)
+  plot_recall_vs_qps_one_algo_paper = target(
+    averages_recoded %>% 
+      filter(dataset %in% c("GLOVE", "GLOVE-2M", "SIFT"), 
+             algorithm == "Annoy",
+             difficulty != "diverse") %>% 
+      do_plot_recall_vs_qps_one_algo_paper(),
+  ),
+  
+  plot_recall_vs_distcomps_one_algo_paper = target(
+    averages_recoded %>% 
+      filter(dataset %in% c("GLOVE", "GLOVE-2M", "SIFT"), 
+             algorithm == "Annoy",
+             difficulty != "diverse") %>% 
+      do_plot_recall_vs_distcomps_one_algo_paper(),
+  ),
+  
+  plot_recall_vs_distcomps_paper = target(
+    averages_recoded %>% 
+      filter(dataset %in% c("GLOVE", "GLOVE-2M", "SIFT"), 
+             algorithm != "bruteforce-blas",
+             difficulty_type == "lid",
+             difficulty != "diverse") %>% 
+      do_plot_recall_vs_distcomps_paper(),
+  ),
+  
+  plot_time_vs_distcomps_paper = averages_recoded %>% 
+    filter(dataset %in% c("GLOVE", "GLOVE-2M", "SIFT"), 
+           algorithm != "bruteforce-blas",
+           difficulty_type == "lid",
+           difficulty != "diverse") %>% 
+    do_plot_distcomps_vs_qps(),
+    
+  figure_recall_vs_qps_lid_paper = {
+    tikz(file = here("imgs", "recall-vs-qps-lid.tex"),
+         width = 5.5, height = 3)
+    print(plot_recall_vs_qps_lid_paper)
+    dev.off()
+  },
+  
+  figure_recall_vs_qps_one_algo_paper = {
+    tikz(file = here("imgs", "recall-vs-qps-one-algo.tex"),
+         width = 5.5, height = 3)
+    print(plot_recall_vs_qps_one_algo_paper)
+    dev.off()
+  },
+  
+  figure_recall_vs_distcomps_one_algo_paper = {
+    tikz(file = here("imgs", "recall-vs-distcomps-one-algo.tex"),
+         width = 5.5, height = 3)
+    print(plot_recall_vs_distcomps_one_algo_paper)
+    dev.off()
+  },
+  
+  figure_recall_vs_distcomps_paper = {
+    tikz(file = here("imgs", "recall-vs-distcomps.tex"),
+         width = 5.5, height = 3)
+    print(plot_recall_vs_distcomps_paper)
     dev.off()
   },
   
   plot_all_datasets_paper = averages_recoded %>% 
-    filter(algorithm %in% c("ONNG", "Annoy"),
-           dataset %in% c("GLOVE", "SIFT", "GLOVE-2M")) %>% 
+    filter(algorithm != "bruteforce-blas",
+           difficulty %in% c("middle","diverse", "hard"),
+           difficulty_type == "lid"
+           ) %>% 
+    mutate(difficulty_type = factor(difficulty_type,
+                                    levels = c("lid", "lrc", "expansion"),
+                                    ordered = T)) %>% 
     do_plot_recall_vs_qps_all_datasets(),
     
   figure_all_datasets_paper = {
     tikz(file = here("imgs", "datasets-comparison.tex"),
-         width = 5.5, height = 4)
+         width = 5.5, height = 3)
     print(plot_all_datasets_paper)
     dev.off()
   },
   
-  #figure_recall_vs_qps = target(
-  #  ggsave(
-  #    filename = here("imgs", str_c(dataset_name, "-", difficulty_name, ".png")),
-  #    plot = plot_recall_vs_qps
-  #  ),
-  #  transform = map(plot_recall_vs_qps)
-  #),
+  plot_sift_glove_paper = averages_recoded %>% 
+    filter(algorithm %in% c("Annoy"),
+           difficulty %in% c("middle","diverse", "hard"),
+           difficulty_type == "lid",
+           dataset %in% c("SIFT", "GLOVE")
+           ) %>% 
+    do_plot_sift_glove_paper(),
+  
+  plot_mnist_paper = averages_recoded %>% 
+    filter(algorithm %in% c("Annoy"),
+           difficulty %in% c("middle","diverse", "hard"),
+           difficulty_type == "lid",
+           dataset %in% c("MNIST", "Fashion-MNIST")
+           ) %>% 
+    do_plot_mnist_paper(),
+  
+  figure_sift_glove_paper = {
+    tikz(file = here("imgs", "sift-glove.tex"),
+         width = 2.5, height = 2)
+    print(plot_sift_glove_paper)
+    dev.off()
+  },
+  
+  figure_mnist_paper = {
+    tikz(file = here("imgs", "fashion-mnist.tex"),
+         width = 2.5, height = 2)
+    print(plot_mnist_paper)
+    dev.off()
+  },
   
   # ------- Distribution plots ----------
   expansion_scores_part = target(
@@ -130,17 +235,17 @@ plan <- drake_plan(
     transform = combine(expansion_scores_part)
   ),
   
-  expansion_50_scores_part = target(
-    read_delim(expansion_50_file,
+  rc_scores_part = target(
+    read_delim(rc_file,
                col_types = "id",
-               col_names = c("id", "expansion_50"),
+               col_names = c("id", "rc"),
                delim = " ") %>% 
-      mutate(dataset = expansion_50_file %>% str_remove("-50")),
-    transform = map(expansion_50_file = !!expansion_50_files)
+      mutate(dataset = rc_file %>% str_remove("-rc")),
+    transform = map(rc_file = !!rc_files)
   ),
-  expansion_50_scores = target(
-    bind_rows(expansion_50_scores_part) %>% recode_datasets(),
-    transform = combine(expansion_50_scores_part)
+  rc_scores = target(
+    bind_rows(rc_scores_part) %>% recode_datasets(),
+    transform = combine(rc_scores_part)
   ),
   
   lid_scores_part = target(
@@ -148,7 +253,7 @@ plan <- drake_plan(
                col_types = "id",
                col_names = c("id", "lid"),
                delim = " ") %>% 
-      mutate(dataset = lid_file),
+      mutate(dataset = lid_file %>% str_remove("-new")),
     transform = map(lid_file = !!lid_files)
   ),
   lid_scores = target(
@@ -157,30 +262,98 @@ plan <- drake_plan(
   ),
   
   difficulty_scores = inner_join(lid_scores, expansion_scores) %>% 
-    inner_join(expansion_50_scores),
+    inner_join(rc_scores),
+  
+  difficulties_to_plot = {
+    difficulty_scores %>% 
+      group_by(dataset, ntile(expansion, 100)) %>% 
+      sample_n(min(100, n())) %>% 
+      ungroup()
+  },
   
   scores_correlation = difficulty_scores %>% 
     group_by(dataset) %>% 
-    summarise(correlation = cor(lid, expansion)),
+    summarise(corr_lid_exp = cor(lid, expansion),
+              corr_lid_lrc = cor(lid, rc),
+              corr_exp_lrc = cor(expansion, rc)),
   
-  plot_scores = target(
-    difficulty_scores %>% 
+  scores_correlation_pearson = {
+    lid_exp <- difficulty_scores %>% 
+      group_by(dataset) %>% 
+      summarise(
+        corr = list(cor.test(lid, expansion, method="pearson") %>% broom::tidy())
+      ) %>% 
+      unnest(corr) %>% 
+      select(dataset, corr_lid_exp=estimate, p_lid_exp=p.value)
+    lid_lrc <- difficulty_scores %>% 
+      group_by(dataset) %>% 
+      summarise(
+        corr = list(cor.test(lid, rc, method="pearson") %>% broom::tidy())
+      ) %>% 
+      unnest(corr) %>% 
+      select(dataset, corr_lid_lrc=estimate, p_lid_lrc=p.value)
+    exp_lrc <- difficulty_scores %>% 
+      group_by(dataset) %>% 
+      summarise(
+        corr = list(cor.test(expansion, rc, method="pearson") %>% broom::tidy())
+      ) %>% 
+      unnest(corr) %>% 
+      select(dataset, corr_exp_lrc=estimate, p_exp_lrc=p.value)
+    inner_join(lid_exp, lid_lrc) %>% 
+      inner_join(exp_lrc)
+  },
+  
+  plot_scores_correlation = scores_correlation %>% 
+    tidyr::gather(corr_lid_exp, corr_lid_lrc, corr_exp_lrc, 
+                  key="pair", value="correlation") %>% 
+    ggplot(aes(dataset, abs(correlation), color=pair)) + 
+    geom_point() + 
+    coord_cartesian(ylim=c(0,1)),
+  
+  plot_scores_lid_exp = target(
+    difficulties_to_plot %>% 
       filter(dataset == dat) %>% 
-      do_scatter_distribution(),
+      do_scatter_distribution_lid_exp(),
+    transform = map(dat = !!datasets)
+  ),
+  plot_scores_lid_lrc = target(
+    difficulties_to_plot %>% 
+      filter(dataset == dat) %>% 
+      do_scatter_distribution_lid_lrc(),
+    transform = map(dat = !!datasets)
+  ),
+  plot_scores_lrc_exp = target(
+    difficulties_to_plot %>% 
+      filter(dataset == dat) %>% 
+      do_scatter_distribution_lrc_exp(),
     transform = map(dat = !!datasets)
   ),
   
-  save_scores = target({
-      #tikz(here("imgs", str_c(dat, "-scores.tex")))
-      #print(plot_scores)
-      #dev.off()
-      ggsave(filename = here("imgs", str_c(dat, "-scores.png")),
-             plot = plot_scores,
-             width=12, height=12,
+  save_scores_lid_exp = target({
+      ggsave(filename = here("imgs", str_c(dat, "-scores-lid-exp.png")),
+             plot = plot_scores_lid_exp,
+             width=8, height=8,
              units = "cm")
     },
-    transform = map(plot_scores)
+    transform = map(plot_scores_lid_exp)
   ),
+  save_score_lid_lrc = target({
+      ggsave(filename = here("imgs", str_c(dat, "-scores-lid-lrc.png")),
+             plot = plot_scores_lid_lrc,
+             width=8, height=8,
+             units = "cm")
+    },
+    transform = map(plot_scores_lid_lrc)
+  ),
+  save_scores_lrc_exp = target({
+      ggsave(filename = here("imgs", str_c(dat, "-scores-lrc-exp.png")),
+             plot = plot_scores_lrc_exp,
+             width=8, height=8,
+             units = "cm")
+    },
+    transform = map(plot_scores_lrc_exp)
+  ),
+  
   
   difficult_threshold_lid = difficulty_scores %>% 
     group_by(dataset) %>% 
@@ -203,6 +376,15 @@ plan <- drake_plan(
     arrange(dataset) %>% 
     mutate(dataset_id = row_number()),
   
+  difficult_threshold_rc = difficulty_scores %>% 
+    group_by(dataset) %>% 
+    arrange(rc) %>% 
+    slice(10000) %>% 
+    transmute(hard_threshold = rc) %>% 
+    ungroup() %>% 
+    mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
+    arrange(desc(dataset)) %>% 
+    mutate(dataset_id = row_number()),
   
   density_lid_plot = {
     plot_data <- difficulty_scores %>% 
@@ -210,18 +392,28 @@ plan <- drake_plan(
       ungroup() %>% 
       inner_join(difficult_threshold_lid) %>% 
       mutate(dataset = fct_reorder(dataset, hard_threshold))
+    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(lid))
+    outliers <- inner_join(iqrs, plot_data) %>% 
+      filter(lid > 3*iqr) %>% 
+      group_by(dataset) %>% 
+      arrange(desc(expansion)) %>% 
+      slice(which(row_number() %% 100 == 1))
+    message("Number of outliers", nrow(outliers))
     ggplot(plot_data, aes(x=lid, y=dataset_id, group=dataset)) +
       geom_density_ridges(scale=.95,
-                          rel_min_height = 0.001,
+                          rel_min_height = 0.0001,
                           quantile_lines=T) +
+      geom_point(data=outliers,
+                 shape=46,
+                 size=.1) +
       geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
                    data=difficult_threshold_lid,
                    color="red",
                    size=1) +
-      geom_label(aes(y=dataset_id + 0.3, label=dataset, x=120),
+      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=120),
                  data=difficult_threshold_lid,
                  hjust="right",
-                 size = 3) +
+                 size = 2) +
       labs(y="",
            x="Local Intrinsic Dimensionality") +
       coord_cartesian(clip = "on") +
@@ -233,9 +425,46 @@ plan <- drake_plan(
   
   density_plot_lid_tex = {
     tikz(here("imgs", "density-lid.tex"),
-         width = 3, height = 2.25)
+         width = 2.8, height = 2.25)
     print(density_lid_plot)
     dev.off()
+  },
+  
+  density_lid_compare_plot = {
+    plot_data <- difficulty_scores %>% 
+      inner_join(lid10_scores) %>% 
+      group_by(dataset) %>% 
+      ungroup() %>% 
+      inner_join(difficult_threshold_lid) %>% 
+      mutate(dataset = fct_reorder(dataset, hard_threshold))
+    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(lid))
+    outliers <- inner_join(iqrs, plot_data) %>% 
+      filter(lid > 3*iqr) %>% 
+      group_by(dataset) %>% 
+      arrange(desc(expansion)) %>% 
+      slice(which(row_number() %% 100 == 1))
+    message("Number of outliers", nrow(outliers))
+    ggplot(plot_data, aes(x=lid, y=dataset_id, group=dataset)) +
+      geom_density_ridges(scale=.95,
+                          rel_min_height = 0.0001,
+                          quantile_lines=T) +
+      geom_density_ridges(mapping=aes(x=lid10),
+                          alpha=0.2,
+                          color="red",
+                          scale=.95,
+                          rel_min_height = 0.0001,
+                          quantile_lines=T) +
+      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=120),
+                 data=difficult_threshold_lid,
+                 hjust="right",
+                 size = 2) +
+      labs(y="",
+           x="Local Intrinsic Dimensionality") +
+      coord_cartesian(clip = "on") +
+      theme_bw() +
+      theme(axis.text.y = element_blank(),
+            axis.ticks.y = element_blank(),
+            text = element_text(size=8))
   },
   
   density_expansion_plot = {
@@ -246,6 +475,13 @@ plan <- drake_plan(
       inner_join(difficult_threshold_expansion) %>% 
       mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
       filter(expansion <= 1.5)
+    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(expansion))
+    outliers <- inner_join(iqrs, plot_data) %>% 
+      filter(rc > 50*iqr) %>% 
+      group_by(dataset) %>% 
+      arrange(desc(expansion)) %>% 
+      slice(which(row_number() %% 100 == 1))
+    message("Number of outliers", nrow(outliers))
     label_x <- plot_data %>% ungroup() %>% summarise(max(expansion)) %>% pull()
     ggplot(plot_data, aes(x=expansion, y=dataset_id, group=dataset)) +
       geom_density_ridges(scale=.95,
@@ -255,10 +491,10 @@ plan <- drake_plan(
                    data=difficult_threshold_expansion,
                    color="red",
                    size=1) +
-      geom_label(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
+      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
                  data=difficult_threshold_expansion,
                  hjust="right",
-                 size=3) +
+                 size=2) +
       scale_x_continuous(trans=log_trans(1.1), breaks=c(1,1.1,1.3,1.5)) +
       labs(y="",
            x="Expansion") +
@@ -271,43 +507,66 @@ plan <- drake_plan(
   
   density_plot_expansion_tex = {
     tikz(here("imgs", "density-expansion.tex"),
-         width = 3, height = 2.25)
+         width = 2.8, height = 2.25)
     print(density_expansion_plot)
     dev.off()
   },
   
+  density_rc_plot = {
+    plot_data <- difficulty_scores %>% 
+      inner_join(difficult_threshold_rc) %>% 
+      mutate(dataset = fct_reorder(dataset, hard_threshold))
+    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(rc))
+    outliers <- inner_join(iqrs, plot_data) %>% 
+      filter(rc > 10*iqr) %>% 
+      group_by(dataset) %>% 
+      arrange(desc(rc)) %>% 
+      slice(which(row_number() %% 100 == 1))
+    message("Number of outliers", nrow(outliers))
+    label_x <- plot_data %>% ungroup() %>% summarise(max(rc)) %>% pull()
+    ggplot(plot_data, aes(x=rc, y=dataset_id, group=dataset)) +
+      geom_density_ridges(scale=.95,
+                          rel_min_height = 0.001,
+                          quantile_lines=T) +
+      geom_point(data=outliers,
+                 shape=46,
+                 size=.1) +
+      geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
+                   data=difficult_threshold_rc,
+                   color="red",
+                   size=1) +
+      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
+                 data=difficult_threshold_rc,
+                 hjust="right",
+                 size = 2) +
+      scale_x_log10() +
+      labs(y="",
+           x="Relative contrast") +
+      coord_cartesian(clip = "on") +
+      theme_bw() +
+      theme(axis.text.y = element_blank(),
+            axis.ticks.y = element_blank(),
+            text = element_text(size=8))
+  },
+  
+  density_plot_rc_tex = {
+    tikz(here("imgs", "density-rc.tex"),
+         width = 2.8, height = 2.25)
+    print(density_rc_plot)
+    dev.off()
+  },
+  
+  
   # ------- Performance distribution scores ------------
-  detail = target(
-    load_results("detail-extended.csv.bz2") %>% 
-      rename(algorithm = algo, parameters = params) %>% 
-      recode_algos() %>% 
-      add_difficulty() %>% 
-      mutate(recall = recall / 10) %>% 
-      select(dataset, difficulty, algorithm, parameters, recall, query_time, difficulty_type) %>% 
-      recode_datasets(),
-    format = "fst"
-  ),
-  averages = detail %>% 
-    group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
-    summarise(qps = 1/mean(query_time), recall = mean(recall)),
   
   plot_distribution = target({
     plot_data <- detail %>%
       filter(algorithm == algorithm_name,
              dataset == dataset_name,
              difficulty == difficulty_name,
-             difficulty_type == difficulty_type_name)
+             difficulty_type == difficulty_type_name) %>% 
+      mutate(recall = recall / 10)
     interactive_distribution_plot(plot_data)
-    #  htmlwidgets::saveWidget(widget,
-    #                          here("imgs", str_c("perf-distribution-",
-    #                                             algorithm_name, "-",
-    #                                             dataset_name, "-",
-    #                                             difficulty_name, "-",
-    #                                             difficulty_type_name,
-    #                                             ".html")))
-    #} else {
-    #  print(paste("Skipping dataset", dataset_name, difficulty_name, algorithm_name))
-    #}
     },
     transform = cross(
       algorithm_name = !!algorithms,
@@ -376,7 +635,7 @@ plan <- drake_plan(
     dev.off()
   },
   
-  plot_ranking_distcomps = data_expansion %>% 
+  plot_ranking_distcomps = averages_recoded %>% 
     filter(difficulty == "middle") %>% 
     filter(algorithm %in% algorithms) %>% 
     filter(dataset != "Fashion-MNIST") %>% 
@@ -437,82 +696,92 @@ plan <- drake_plan(
   
   # ----------- Recall vs. difficulty ------------
   
-  queries_glove_100_diverse_lid = get_queryset_lid("glove-100-angular"),
-  queries_glove_100_diverse_expansion = get_queryset_expansion("glove-100-angular"),
-  
   detail_to_plot = detail %>% 
-    filter(dataset == "GLOVE",
-           difficulty == "diverse"),
-  
-  detail_to_attach = detail %>% 
-    filter(dataset == "GLOVE",
-           difficulty_type == "lid",
-           parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)"),
-  
-  #performance_with_score = attach_score_difficulty(detail_to_attach),
+    filter(dataset == "GLOVE-2M",
+           parameters == "Annoy(n_trees=100, search_k=200000)",
+           difficulty == "diverse"
+           ),
+ 
+  correlation_lid = detail %>% 
+    filter(difficulty_type == "lid") %>% 
+    group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+    summarise(correlation_recall = cor(recall, lid),
+              correlation_time = cor(query_time, lid)),
+  correlation_lrc = detail %>% 
+    filter(difficulty_type == "lrc") %>% 
+    group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+    summarise(correlation_recall = cor(recall, lrc),
+              correlation_time = cor(query_time, lrc)),
+  correlation_expansion = detail %>% 
+    filter(difficulty_type == "expansion") %>% 
+    group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+    summarise(correlation_recall = cor(recall, expansion),
+              correlation_time = cor(query_time, expansion)),
+  correlation = bind_rows(correlation_lid, correlation_lrc, correlation_expansion),
+  correlation_plot_data = correlation %>% 
+    group_by(dataset, algorithm, difficulty, difficulty_type) %>% 
+    summarise(corr = mean(correlation_recall, na.rm=T)) %>% 
+    filter(difficulty=="diverse"),
+ 
+  correlation_plot = correlation_plot_data %>% 
+    mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
+    ungroup() %>% 
+    mutate(difficulty_type = recode_factor(difficulty_type,
+                                           "lid" = "LID",
+                                           "expansion" = "Expansion",
+                                           "lrc" = "RC")) %>% 
+    ggplot(aes(dataset, algorithm, fill=corr)) +
+    geom_tile() + 
+    geom_text(aes(label=scales::number(corr,accuracy=.01),
+                  color=color),
+              size=2) + 
+    facet_wrap(vars(difficulty_type)) + 
+    scale_fill_continuous_diverging() + 
+    scale_color_identity()+
+    theme_classic() + 
+    theme(axis.text.x.bottom = element_text(angle=90)),
+ 
+  correlation_plot_paper = {
+    ggsave(plot=correlation_plot,
+           filename = here("imgs", "correlation-plot.png"),
+           width = 16,
+           height = 8,
+           units = "cm")
+  },
+ 
+  recall_vs_x_plot_size = 1.7,
     
   recall_vs_lid_paper_1 = {
     tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
-         width = 2.25, height = 2.25)
+         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
     p <- detail_to_plot %>% 
-      filter(difficulty_type == "lid",
-             parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
-      bind_cols(queries_glove_100_diverse_lid) %>% 
+      filter(difficulty_type == "lid") %>% 
+      (function(d){print(head(d)); d}) %>% 
       do_plot_recall_vs_lid_single()
     print(p)
     dev.off()
   },
   
   recall_vs_expansion_paper_1 = {
-    #tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
-    #     width = 2.25, height = 2.25)
+    tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
+         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
     p <- detail_to_plot %>% 
-      filter(difficulty_type == "expansion",
-             parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
-      bind_cols(queries_glove_100_diverse_expansion) %>% 
+      filter(difficulty_type == "expansion") %>% 
       filter(expansion <= 1.1) %>% 
       do_plot_recall_vs_expansion_single()
-    #print(p)
-    #dev.off()
+    print(p)
+    dev.off()
   },
-  
-  qps_vs_lid_paper_1 = {
-    tikz(file = here("imgs", "onng-qps-vs-lid.tex"),
-         width = 2.25, height = 2.25)
+ 
+  recall_vs_lrc_paper_1 = {
+    tikz(file = here("imgs", "onng-recall-vs-rc.tex"),
+         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
     p <- detail_to_plot %>% 
-      filter(difficulty_type == "lid",
-             parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
-      bind_cols(queries_glove_100_diverse_lid) %>% 
-      do_plot_qps_vs_lid_single()
+      filter(difficulty_type == "lrc") %>% 
+      do_plot_recall_vs_lrc_single()
     print(p)
     dev.off()
   },
   
-  qps_vs_expansion_paper_1 = {
-    tikz(file = here("imgs", "onng-qps-vs-expansion.tex"),
-         width = 2.25, height = 2.25)
-    p <- detail_to_plot %>% 
-      filter(difficulty_type == "expansion",
-             parameters == "ONNG-NGT(100, 10, 120, -2, 1.000)") %>% 
-      bind_cols(queries_glove_100_diverse_expansion) %>% 
-      filter(expansion <= 1.1) %>% 
-      do_plot_qps_vs_expansion_single()
-    print(p)
-    dev.off()
-  },
-  
-  # -------- Report ---------
-  #report = rmarkdown::render(
-  #  knitr_in("report.Rmd"),
-  #  output_file = file_out("report.html"),
-  #  quiet = TRUE
-  #)
   
 )
-
-
-
-
-
-
-
