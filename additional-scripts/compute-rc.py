@@ -8,6 +8,12 @@ from scipy.spatial.distance import cdist
 
 f = h5py.File(sys.argv[1])
 
+# default: relate average distance to distance of 10-th NN
+k = 10
+
+if len(sys.argv) > 2:
+    k = int(sys.argv[2])
+
 samples = 3000
 m = len(f['test'])
 
@@ -15,7 +21,7 @@ distances = numpy.array(f['distances'])
 
 #query_indices = [random.choice(range(len(f['test']))) for _ in range(m)]
 
-queries = numpy.array(f['test'])#numpy.array([f['train'][i] for i in query_indices])
+queries = numpy.array(f['test'])
 
 dataset = numpy.array(f['train'])
 
@@ -32,7 +38,7 @@ if 'angular' in sys.argv[1]:
 assert len(avg) == len(queries)
 
 for i in range(len(queries)):
-    for j in range(10, 100):
+    for j in range(k - 1, 100):
         if f['distances'][i][j] > 1e-6:
             dist = f['distances'][i][j]
             break
