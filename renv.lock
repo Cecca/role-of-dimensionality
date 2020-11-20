@@ -1,0 +1,668 @@
+{
+  "R": {
+    "Version": "3.6.1",
+    "Repositories": [
+      {
+        "Name": "CRAN",
+        "URL": "https://cran.stat.unipd.it"
+      }
+    ]
+  },
+  "Packages": {
+    "BH": {
+      "Package": "BH",
+      "Version": "1.72.0-3",
+      "Source": "CRAN"
+    },
+    "DBI": {
+      "Package": "DBI",
+      "Version": "1.1.0",
+      "Source": "CRAN"
+    },
+    "R6": {
+      "Package": "R6",
+      "Version": "2.4.1",
+      "Source": "CRAN"
+    },
+    "RColorBrewer": {
+      "Package": "RColorBrewer",
+      "Version": "1.1-2",
+      "Source": "CRAN"
+    },
+    "Rcpp": {
+      "Package": "Rcpp",
+      "Version": "1.0.3",
+      "Source": "CRAN"
+    },
+    "RcppParallel": {
+      "Package": "RcppParallel",
+      "Version": "4.4.4",
+      "Source": "CRAN"
+    },
+    "arrow": {
+      "Package": "arrow",
+      "Version": "0.16.0.2",
+      "Source": "CRAN"
+    },
+    "askpass": {
+      "Package": "askpass",
+      "Version": "1.1",
+      "Source": "CRAN"
+    },
+    "assertthat": {
+      "Package": "assertthat",
+      "Version": "0.2.1",
+      "Source": "CRAN"
+    },
+    "backports": {
+      "Package": "backports",
+      "Version": "1.1.5",
+      "Source": "CRAN"
+    },
+    "base64enc": {
+      "Package": "base64enc",
+      "Version": "0.1-3",
+      "Source": "CRAN"
+    },
+    "base64url": {
+      "Package": "base64url",
+      "Version": "1.4",
+      "Source": "CRAN"
+    },
+    "bayestestR": {
+      "Package": "bayestestR",
+      "Version": "0.5.1",
+      "Source": "CRAN"
+    },
+    "bit": {
+      "Package": "bit",
+      "Version": "1.1-15.1",
+      "Source": "CRAN"
+    },
+    "bit64": {
+      "Package": "bit64",
+      "Version": "0.9-7",
+      "Source": "CRAN"
+    },
+    "broom": {
+      "Package": "broom",
+      "Version": "0.5.3",
+      "Source": "CRAN"
+    },
+    "callr": {
+      "Package": "callr",
+      "Version": "3.4.0",
+      "Source": "CRAN"
+    },
+    "cellranger": {
+      "Package": "cellranger",
+      "Version": "1.1.0",
+      "Source": "CRAN"
+    },
+    "cli": {
+      "Package": "cli",
+      "Version": "2.0.1",
+      "Source": "CRAN"
+    },
+    "clipr": {
+      "Package": "clipr",
+      "Version": "0.7.0",
+      "Source": "CRAN"
+    },
+    "colorspace": {
+      "Package": "colorspace",
+      "Version": "1.4-1",
+      "Source": "CRAN"
+    },
+    "cowplot": {
+      "Package": "cowplot",
+      "Version": "1.0.0",
+      "Source": "CRAN"
+    },
+    "crayon": {
+      "Package": "crayon",
+      "Version": "1.3.4",
+      "Source": "CRAN"
+    },
+    "crosstalk": {
+      "Package": "crosstalk",
+      "Version": "1.0.0",
+      "Source": "CRAN"
+    },
+    "curl": {
+      "Package": "curl",
+      "Version": "4.3",
+      "Source": "CRAN"
+    },
+    "data.table": {
+      "Package": "data.table",
+      "Version": "1.12.8",
+      "Source": "CRAN"
+    },
+    "dbplyr": {
+      "Package": "dbplyr",
+      "Version": "1.4.2",
+      "Source": "CRAN"
+    },
+    "digest": {
+      "Package": "digest",
+      "Version": "0.6.23",
+      "Source": "CRAN"
+    },
+    "directlabels": {
+      "Package": "directlabels",
+      "Version": "2020.1.31",
+      "Source": "CRAN"
+    },
+    "dplyr": {
+      "Package": "dplyr",
+      "Version": "0.8.3",
+      "Source": "CRAN"
+    },
+    "drake": {
+      "Package": "drake",
+      "Version": "7.9.0",
+      "Source": "CRAN"
+    },
+    "effectsize": {
+      "Package": "effectsize",
+      "Version": "0.1.1",
+      "Source": "CRAN"
+    },
+    "ellipsis": {
+      "Package": "ellipsis",
+      "Version": "0.3.0",
+      "Source": "CRAN"
+    },
+    "evaluate": {
+      "Package": "evaluate",
+      "Version": "0.14",
+      "Source": "CRAN"
+    },
+    "fansi": {
+      "Package": "fansi",
+      "Version": "0.4.1",
+      "Source": "CRAN"
+    },
+    "farver": {
+      "Package": "farver",
+      "Version": "2.0.1",
+      "Source": "CRAN"
+    },
+    "fastmap": {
+      "Package": "fastmap",
+      "Version": "1.0.1",
+      "Source": "CRAN"
+    },
+    "filehash": {
+      "Package": "filehash",
+      "Version": "2.4-2",
+      "Source": "CRAN"
+    },
+    "filelock": {
+      "Package": "filelock",
+      "Version": "1.0.2",
+      "Source": "CRAN"
+    },
+    "forcats": {
+      "Package": "forcats",
+      "Version": "0.4.0",
+      "Source": "CRAN"
+    },
+    "fs": {
+      "Package": "fs",
+      "Version": "1.3.1",
+      "Source": "CRAN"
+    },
+    "gdtools": {
+      "Package": "gdtools",
+      "Version": "0.2.1",
+      "Source": "CRAN"
+    },
+    "generics": {
+      "Package": "generics",
+      "Version": "0.0.2",
+      "Source": "CRAN"
+    },
+    "gganimate": {
+      "Package": "gganimate",
+      "Version": "1.0.4",
+      "Source": "CRAN"
+    },
+    "ggiraph": {
+      "Package": "ggiraph",
+      "Version": "0.7.0",
+      "Source": "CRAN"
+    },
+    "ggplot2": {
+      "Package": "ggplot2",
+      "Version": "3.2.1",
+      "Source": "CRAN"
+    },
+    "ggrepel": {
+      "Package": "ggrepel",
+      "Version": "0.8.1",
+      "Source": "CRAN"
+    },
+    "ggridges": {
+      "Package": "ggridges",
+      "Version": "0.5.2",
+      "Source": "CRAN"
+    },
+    "glue": {
+      "Package": "glue",
+      "Version": "1.3.1",
+      "Source": "CRAN"
+    },
+    "gridExtra": {
+      "Package": "gridExtra",
+      "Version": "2.3",
+      "Source": "CRAN"
+    },
+    "gtable": {
+      "Package": "gtable",
+      "Version": "0.3.0",
+      "Source": "CRAN"
+    },
+    "haven": {
+      "Package": "haven",
+      "Version": "2.2.0",
+      "Source": "CRAN"
+    },
+    "here": {
+      "Package": "here",
+      "Version": "0.1",
+      "Source": "CRAN"
+    },
+    "hexbin": {
+      "Package": "hexbin",
+      "Version": "1.28.0",
+      "Source": "CRAN"
+    },
+    "highr": {
+      "Package": "highr",
+      "Version": "0.8",
+      "Source": "CRAN"
+    },
+    "hms": {
+      "Package": "hms",
+      "Version": "0.5.3",
+      "Source": "CRAN"
+    },
+    "htmltools": {
+      "Package": "htmltools",
+      "Version": "0.4.0",
+      "Source": "CRAN"
+    },
+    "htmlwidgets": {
+      "Package": "htmlwidgets",
+      "Version": "1.5.1",
+      "Source": "CRAN"
+    },
+    "httpuv": {
+      "Package": "httpuv",
+      "Version": "1.5.2",
+      "Source": "CRAN"
+    },
+    "httr": {
+      "Package": "httr",
+      "Version": "1.4.1",
+      "Source": "CRAN"
+    },
+    "igraph": {
+      "Package": "igraph",
+      "Version": "1.2.4.2",
+      "Source": "CRAN"
+    },
+    "insight": {
+      "Package": "insight",
+      "Version": "0.8.0",
+      "Source": "CRAN"
+    },
+    "jsonlite": {
+      "Package": "jsonlite",
+      "Version": "1.6",
+      "Source": "CRAN"
+    },
+    "knitr": {
+      "Package": "knitr",
+      "Version": "1.26",
+      "Source": "CRAN"
+    },
+    "labeling": {
+      "Package": "labeling",
+      "Version": "0.3",
+      "Source": "CRAN"
+    },
+    "later": {
+      "Package": "later",
+      "Version": "1.0.0",
+      "Source": "CRAN"
+    },
+    "lazyeval": {
+      "Package": "lazyeval",
+      "Version": "0.2.2",
+      "Source": "CRAN"
+    },
+    "lifecycle": {
+      "Package": "lifecycle",
+      "Version": "0.1.0",
+      "Source": "CRAN"
+    },
+    "lubridate": {
+      "Package": "lubridate",
+      "Version": "1.7.4",
+      "Source": "CRAN"
+    },
+    "magrittr": {
+      "Package": "magrittr",
+      "Version": "1.5",
+      "Source": "CRAN"
+    },
+    "markdown": {
+      "Package": "markdown",
+      "Version": "1.1",
+      "Source": "CRAN"
+    },
+    "mime": {
+      "Package": "mime",
+      "Version": "0.8",
+      "Source": "CRAN"
+    },
+    "modelr": {
+      "Package": "modelr",
+      "Version": "0.1.5",
+      "Source": "CRAN"
+    },
+    "munsell": {
+      "Package": "munsell",
+      "Version": "0.5.0",
+      "Source": "CRAN"
+    },
+    "openssl": {
+      "Package": "openssl",
+      "Version": "1.4.1",
+      "Source": "CRAN"
+    },
+    "packrat": {
+      "Package": "packrat",
+      "Version": "0.5.0",
+      "Source": "CRAN"
+    },
+    "parameters": {
+      "Package": "parameters",
+      "Version": "0.4.1",
+      "Source": "CRAN"
+    },
+    "pillar": {
+      "Package": "pillar",
+      "Version": "1.4.3",
+      "Source": "CRAN"
+    },
+    "pkgconfig": {
+      "Package": "pkgconfig",
+      "Version": "2.0.3",
+      "Source": "CRAN"
+    },
+    "plogr": {
+      "Package": "plogr",
+      "Version": "0.2.0",
+      "Source": "CRAN"
+    },
+    "plotly": {
+      "Package": "plotly",
+      "Version": "4.9.1",
+      "Source": "CRAN"
+    },
+    "plyr": {
+      "Package": "plyr",
+      "Version": "1.8.5",
+      "Source": "CRAN"
+    },
+    "png": {
+      "Package": "png",
+      "Version": "0.1-7",
+      "Source": "CRAN"
+    },
+    "prettyunits": {
+      "Package": "prettyunits",
+      "Version": "1.1.0",
+      "Source": "CRAN"
+    },
+    "processx": {
+      "Package": "processx",
+      "Version": "3.4.1",
+      "Source": "CRAN"
+    },
+    "progress": {
+      "Package": "progress",
+      "Version": "1.2.2",
+      "Source": "CRAN"
+    },
+    "promises": {
+      "Package": "promises",
+      "Version": "1.1.0",
+      "Source": "CRAN"
+    },
+    "ps": {
+      "Package": "ps",
+      "Version": "1.3.0",
+      "Source": "CRAN"
+    },
+    "purrr": {
+      "Package": "purrr",
+      "Version": "0.3.3",
+      "Source": "CRAN"
+    },
+    "quadprog": {
+      "Package": "quadprog",
+      "Version": "1.5-8",
+      "Source": "CRAN"
+    },
+    "rPref": {
+      "Package": "rPref",
+      "Version": "1.3",
+      "Source": "CRAN"
+    },
+    "readr": {
+      "Package": "readr",
+      "Version": "1.3.1",
+      "Source": "CRAN"
+    },
+    "readxl": {
+      "Package": "readxl",
+      "Version": "1.3.1",
+      "Source": "CRAN"
+    },
+    "rematch": {
+      "Package": "rematch",
+      "Version": "1.0.1",
+      "Source": "CRAN"
+    },
+    "reprex": {
+      "Package": "reprex",
+      "Version": "0.3.0",
+      "Source": "CRAN"
+    },
+    "reshape2": {
+      "Package": "reshape2",
+      "Version": "1.4.3",
+      "Source": "CRAN"
+    },
+    "rlang": {
+      "Package": "rlang",
+      "Version": "0.4.2",
+      "Source": "CRAN"
+    },
+    "rmarkdown": {
+      "Package": "rmarkdown",
+      "Version": "2.0",
+      "Source": "CRAN"
+    },
+    "rprojroot": {
+      "Package": "rprojroot",
+      "Version": "1.3-2",
+      "Source": "CRAN"
+    },
+    "rstudioapi": {
+      "Package": "rstudioapi",
+      "Version": "0.10",
+      "Source": "CRAN"
+    },
+    "rvest": {
+      "Package": "rvest",
+      "Version": "0.3.5",
+      "Source": "CRAN"
+    },
+    "scales": {
+      "Package": "scales",
+      "Version": "1.1.0",
+      "Source": "CRAN"
+    },
+    "see": {
+      "Package": "see",
+      "Version": "0.4.0",
+      "Source": "CRAN"
+    },
+    "selectr": {
+      "Package": "selectr",
+      "Version": "0.4-2",
+      "Source": "CRAN"
+    },
+    "shiny": {
+      "Package": "shiny",
+      "Version": "1.4.0",
+      "Source": "CRAN"
+    },
+    "sourcetools": {
+      "Package": "sourcetools",
+      "Version": "0.1.7",
+      "Source": "CRAN"
+    },
+    "storr": {
+      "Package": "storr",
+      "Version": "1.2.1",
+      "Source": "CRAN"
+    },
+    "stringi": {
+      "Package": "stringi",
+      "Version": "1.4.5",
+      "Source": "CRAN"
+    },
+    "stringr": {
+      "Package": "stringr",
+      "Version": "1.4.0",
+      "Source": "CRAN"
+    },
+    "sys": {
+      "Package": "sys",
+      "Version": "3.3",
+      "Source": "CRAN"
+    },
+    "systemfonts": {
+      "Package": "systemfonts",
+      "Version": "0.1.1",
+      "Source": "CRAN"
+    },
+    "tibble": {
+      "Package": "tibble",
+      "Version": "2.1.3",
+      "Source": "CRAN"
+    },
+    "tidyr": {
+      "Package": "tidyr",
+      "Version": "1.0.0",
+      "Source": "CRAN"
+    },
+    "tidyselect": {
+      "Package": "tidyselect",
+      "Version": "0.2.5",
+      "Source": "CRAN"
+    },
+    "tidyverse": {
+      "Package": "tidyverse",
+      "Version": "1.3.0",
+      "Source": "CRAN"
+    },
+    "tikzDevice": {
+      "Package": "tikzDevice",
+      "Version": "0.12.3",
+      "Source": "CRAN"
+    },
+    "tinytex": {
+      "Package": "tinytex",
+      "Version": "0.18",
+      "Source": "CRAN"
+    },
+    "tweenr": {
+      "Package": "tweenr",
+      "Version": "1.0.1",
+      "Source": "CRAN"
+    },
+    "txtq": {
+      "Package": "txtq",
+      "Version": "0.2.0",
+      "Source": "CRAN"
+    },
+    "utf8": {
+      "Package": "utf8",
+      "Version": "1.1.4",
+      "Source": "CRAN"
+    },
+    "uuid": {
+      "Package": "uuid",
+      "Version": "0.1-2",
+      "Source": "CRAN"
+    },
+    "vctrs": {
+      "Package": "vctrs",
+      "Version": "0.2.1",
+      "Source": "CRAN"
+    },
+    "viridis": {
+      "Package": "viridis",
+      "Version": "0.5.1",
+      "Source": "CRAN"
+    },
+    "viridisLite": {
+      "Package": "viridisLite",
+      "Version": "0.3.0",
+      "Source": "CRAN"
+    },
+    "whisker": {
+      "Package": "whisker",
+      "Version": "0.4",
+      "Source": "CRAN"
+    },
+    "withr": {
+      "Package": "withr",
+      "Version": "2.1.2",
+      "Source": "CRAN"
+    },
+    "xfun": {
+      "Package": "xfun",
+      "Version": "0.12",
+      "Source": "CRAN"
+    },
+    "xml2": {
+      "Package": "xml2",
+      "Version": "1.2.2",
+      "Source": "CRAN"
+    },
+    "xtable": {
+      "Package": "xtable",
+      "Version": "1.8-4",
+      "Source": "CRAN"
+    },
+    "yaml": {
+      "Package": "yaml",
+      "Version": "2.2.0",
+      "Source": "CRAN"
+    },
+    "zeallot": {
+      "Package": "zeallot",
+      "Version": "0.1.0",
+      "Source": "CRAN"
+    }
+  }
+}
