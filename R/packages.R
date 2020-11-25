@@ -1,5 +1,6 @@
 suppressPackageStartupMessages({
   library(tidyverse)
+  library(data.table)
   library(here)
   library(drake)
   library(ggiraph)
