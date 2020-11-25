@@ -86,16 +86,7 @@ def compute_rc(queries, dataset, distances, k, distance_type, n_samples=3000):
 def get_dimensionality_measures(dataset, distance_type):
     if 'dimensionality_measures' not in dataset:
         group = dataset.create_group('dimensionality_measures')
-        # measures = {
-        #     'lrc' : compute_rc(dataset['test'], 
-        #                        dataset['train'],
-        #                        dataset['distances'],
-        #                        10,
-        #                        distance_type),
-        #     'lid': compute_lid(dataset['distances']),
-        #     'lid10': compute_lid_10(dataset['distances']),
-        #     'expansion': compute_expansion(dataset['distances'], 10)
-        # }
+    # TODO Should we update this with the new choices of k?
     if 'lrc' not in dataset['dimensionality_measures']:
         dataset['dimensionality_measures']['lrc'] = compute_rc(dataset['test'], 
                                dataset['train'],
@@ -178,6 +169,7 @@ dataset_map = {
     "glove-2m-300-angular": "GLOVE-2M" ,
     "gnews-300-angular": "GNEWS" ,
     "glove-100-angular": "GLOVE" ,
+    "glove-100-angular-10": "GLOVE-10" ,
     "sift-128-euclidean": "SIFT" ,
     "fashion-mnist-784-euclidean": "Fashion-MNIST" ,
     "mnist-784-euclidean": "MNIST" 
@@ -239,10 +231,13 @@ def run_to_dataframe(data, run, properties, recompute=False):
     metrics_cache = get_or_create_metrics(run)
     # cache the knn recall (if needed)
     metrics['k-nn']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
+    metrics['dist-rmse']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
     recalls = metrics_cache['knn']['recalls']
+    dist_rmse = metrics_cache['dist-rmse']
     df = pd.DataFrame({
         'recall': numpy.array(recalls) / k,
         'query_time': query_times,
+        'dist_rmse': dist_rmse
     })
     if 'expansion' in dataset:
         difficulty_type = 'expansion'

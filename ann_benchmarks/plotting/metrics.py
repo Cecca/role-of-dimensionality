@@ -28,6 +28,17 @@ def knn(dataset_distances, run_distances, count, metrics, epsilon=1e-10):
         print("Found cached result")
     return metrics['knn']
 
+def dist_rmse(dataset_distances, run_distances, count, metrics):
+    if 'dist-rmse' not in metrics:
+        print('Computing distance error metrics')
+        top_true = dataset_distances[:,0:count]
+        diff = run_distances - top_true
+        rmse = np.sqrt(np.sum(diff*diff, axis=1))
+        metrics['dist-rmse'] = rmse
+    else:
+        pass
+    return metrics['dist-rmse']
+
 
 def epsilon(dataset_distances, run_distances, count, metrics, epsilon=0.01):
     s = 'eps' + str(epsilon)
@@ -153,6 +164,11 @@ all_metrics = {
         "description": "Epsilon 0.1 Recall",
         "function": lambda true_distances, run_distances, query_times, metrics, run_attrs: epsilon(true_distances, run_distances, run_attrs["count"], metrics, 0.1).attrs['mean'],
         "worst": float("-inf")
+    },
+    "dist-rmse": {
+        "description": "Distances RMSE",
+        "function": lambda true_distances, run_distances, query_times, metrics, run_attrs: dist_rmse(true_distances, run_distances, run_attrs["count"], metrics),
+        "worst": float("inf")
     },
     "rel": {
         "description": "Relative Error",
