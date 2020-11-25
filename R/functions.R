@@ -1330,7 +1330,39 @@ arrow_plot <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
-  
+plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
+    pd <- dataset %>%
+      mutate(group = cut({{ x }}, 10, labels = F) / 10 - 0.5/10) %>%
+      group_by(dataset, group) %>%
+      summarise(
+        ymax = max({{ y }}),
+        ymin = min({{ y }}),
+        y95 = quantile({{ y }}, 0.95),
+        y75 = quantile({{ y }}, 0.75),
+        y50 = quantile({{ y }}, 0.5),
+        y25 = quantile({{ y }}, 0.25),
+        y5 = quantile({{ y }}, 0.05),
+        hard_mark = 1 - 10000/n(),
+      )
+    p <- ggplot(pd, aes(group)) +
+      geom_abline(intercept=0, slope=1) +
+      geom_linerange(aes(ymin=ymin, ymax=ymax), color="black") +
+      geom_linerange(aes(ymin=y5, ymax=y95), size=1.5, color="black") +
+      geom_linerange(aes(ymin=y25, ymax=y75), size=2.5, color="black") +
+      geom_point(aes(y=y50), size=2.5, shape=15, color="white") +
+      # geom_vline(aes(xintercept=hard_mark), color="red") +
+      geom_hline(aes(yintercept=hard_mark), color="red") +
+      labs(x="rank with k=10",
+           y="rank with k=100") +
+      facet_wrap(vars(dataset),
+                scales="free",
+                ncol=1)
+    ggsave(plot=p,
+           filename=filename,
+           width=5,
+           height=10,
+           dpi=300)
+}  
   
   
   
