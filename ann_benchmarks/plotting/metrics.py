@@ -37,6 +37,7 @@ def dist_rmse(dataset_distances, run_distances, count, metrics):
         rmse = np.sqrt(np.sum(diff*diff, axis=1))
         rmse_metrics.attrs['mean'] = np.mean(rmse)
         rmse_metrics.attrs['std'] = np.std(rmse)
+        rmse_metrics.attrs['rmse_values'] = rmse
     else:
         pass
     return metrics['dist-rmse']

@@ -64,9 +64,9 @@ def compute_lid_10(all_distances):
 
 def compute_rc(queries, dataset, distances, k, distance_type, n_samples=3000):
     print("Computing the Local Relative Contrast")
-    samples = numpy.array([random.choice(dataset) 
+    samples = numpy.array([random.choice(dataset)
                            for _ in range(n_samples)])
-    
+
     if 'euclidean' in distance_type:
         avg = numpy.mean(numpy.transpose(
             cdist(samples, queries, 'euclidean')), axis=1)
@@ -88,7 +88,7 @@ def get_dimensionality_measures(dataset, distance_type):
         group = dataset.create_group('dimensionality_measures')
     # TODO Should we update this with the new choices of k?
     if 'lrc' not in dataset['dimensionality_measures']:
-        dataset['dimensionality_measures']['lrc'] = compute_rc(dataset['test'], 
+        dataset['dimensionality_measures']['lrc'] = compute_rc(dataset['test'],
                                dataset['train'],
                                dataset['distances'],
                                10,
@@ -172,7 +172,7 @@ dataset_map = {
     "glove-100-angular-10": "GLOVE-10" ,
     "sift-128-euclidean": "SIFT" ,
     "fashion-mnist-784-euclidean": "Fashion-MNIST" ,
-    "mnist-784-euclidean": "MNIST" 
+    "mnist-784-euclidean": "MNIST"
 }
 dataset_cat = pd.CategoricalDtype(dataset_map.values())
 
@@ -190,7 +190,7 @@ def compute_metrics_all_runs(dataset, res, recompute=False):
             print('Recomputing metrics, clearing cache')
             del run['metrics']
         metrics_cache = get_or_create_metrics(run)
-        
+
         dataset = properties['dataset']
         if 'expansion' in dataset:
             difficulty_type = 'expansion'
@@ -233,7 +233,7 @@ def run_to_dataframe(data, run, properties, recompute=False):
     metrics['k-nn']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
     metrics['dist-rmse']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
     recalls = metrics_cache['knn']['recalls']
-    dist_rmse = metrics_cache['dist-rmse']
+    dist_rmse = metrics_cache['dist-rmse']['rmse_values']
     df = pd.DataFrame({
         'recall': numpy.array(recalls) / k,
         'query_time': query_times,
