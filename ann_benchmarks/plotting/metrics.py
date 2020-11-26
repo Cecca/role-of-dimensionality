@@ -31,10 +31,12 @@ def knn(dataset_distances, run_distances, count, metrics, epsilon=1e-10):
 def dist_rmse(dataset_distances, run_distances, count, metrics):
     if 'dist-rmse' not in metrics:
         print('Computing distance error metrics')
+        rmse_metrics = metrics.create_group('dist-rmse')
         top_true = dataset_distances[:,0:count]
         diff = run_distances - top_true
         rmse = np.sqrt(np.sum(diff*diff, axis=1))
-        metrics['dist-rmse'] = rmse
+        rmse_metrics.attrs['mean'] = np.mean(rmse)
+        rmse_metrics.attrs['std'] = np.std(rmse)
     else:
         pass
     return metrics['dist-rmse']
@@ -167,7 +169,7 @@ all_metrics = {
     },
     "dist-rmse": {
         "description": "Distances RMSE",
-        "function": lambda true_distances, run_distances, query_times, metrics, run_attrs: dist_rmse(true_distances, run_distances, run_attrs["count"], metrics),
+        "function": lambda true_distances, run_distances, query_times, metrics, run_attrs: dist_rmse(true_distances, run_distances, run_attrs["count"], metrics).attrs['mean'],
         "worst": float("inf")
     },
     "rel": {
