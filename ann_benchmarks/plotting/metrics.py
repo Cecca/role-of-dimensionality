@@ -56,7 +56,7 @@ def epsilon(dataset_distances, run_distances, count, metrics, epsilon=0.01):
         print("Found cached result")
     return metrics[s]
 
-def rel(dataset_distances, run_distances, metrics):
+def rel_old(dataset_distances, run_distances, metrics):
     if 'rel' not in metrics.attrs:
         print('Computing rel metrics')
         total_closest_distance = 0.0
@@ -72,6 +72,31 @@ def rel(dataset_distances, run_distances, metrics):
     else:
         print("Found cached result")
     return metrics.attrs['rel']
+
+
+def rel(dataset_distances, run_distances, metrics):
+    if 'rel' not in metrics:
+        print('Computing rel metrics')
+        rel_group = metrics.create_group('rel')
+
+        k = run_distances.shape[1]
+        # Take the first k distances
+        dataset_distances = dataset_distances[:,:k]
+        dataset_sum       = np.sum(dataset_distances, axis=1)
+        run_sum           = np.sum(run_distances, axis=1)
+
+        relative_errors = run_sum / dataset_sum
+
+        rel_group.attrs['mean'] = np.mean(relative_errors)
+        rel_group.attrs['std'] = np.std(relative_errors)
+        percentiles = [5,25,50,75,95]
+        percentile_values = np.percentile(relative_errors, percentiles)
+        for p, v in zip(percentiles, percentile_values):
+            rel_group.attrs['perc-' + str(p)] = v
+        rel_group['relative_errors'] = relative_errors
+    else:
+        print("Found cached result")
+    return metrics['rel']
 
 def queries_per_second(query_times, metrics):
     if 'qps' not in metrics:
@@ -156,7 +181,7 @@ all_metrics = {
     },
     "rel": {
         "description": "Relative Error",
-        "function": lambda true_distances, run_distances, query_times, metrics, run_attrs: rel(true_distances, run_distances, metrics),
+        "function": lambda true_distances, run_distances, query_times, metrics, run_attrs: rel(true_distances, run_distances, metrics).attrs['mean'],
         "worst": float("inf")
     },
     "qps": {

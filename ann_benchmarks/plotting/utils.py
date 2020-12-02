@@ -178,6 +178,7 @@ dataset_map = {
     "glove-2m-300-angular": "GLOVE-2M" ,
     "gnews-300-angular": "GNEWS" ,
     "glove-100-angular": "GLOVE" ,
+    "glove-100-angular-10": "GLOVE(k=10)" ,
     "sift-128-euclidean": "SIFT" ,
     "fashion-mnist-784-euclidean": "Fashion-MNIST" ,
     "mnist-784-euclidean": "MNIST" 
@@ -240,8 +241,12 @@ def run_to_dataframe(data, run, properties, recompute=False):
     # cache the knn recall (if needed)
     metrics['k-nn']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
     recalls = metrics_cache['knn']['recalls']
+    # cache the relative error (if needed)
+    metrics['rel']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
+    rels = metrics_cache['rel']['relative_errors']
     df = pd.DataFrame({
         'recall': numpy.array(recalls) / k,
+        'relative_error': numpy.array(rels),
         'query_time': query_times,
     })
     if 'expansion' in dataset:

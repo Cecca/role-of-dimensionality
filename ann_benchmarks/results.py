@@ -59,8 +59,9 @@ def load_all_results(dataset=None, count=None, split_batched=False,  batch_mode=
                         pass
                 yield properties, f
                 f.close()
-            except:
-                pass
+            except Exception as e:
+                import sys
+                print(e, file=sys.stderr)
 
 def get_unique_algorithms():
     algorithms = set()
