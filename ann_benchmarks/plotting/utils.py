@@ -246,7 +246,7 @@ def run_to_dataframe(data, run, properties, recompute=False):
     rels = metrics_cache['rel']['relative_errors']
     df = pd.DataFrame({
         'recall': numpy.array(recalls) / k,
-        'relative_error': numpy.array(rels),
+        # 'relative_error': numpy.array(rels),
         'query_time': query_times,
     })
     if 'expansion' in dataset:
