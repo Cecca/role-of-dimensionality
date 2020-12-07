@@ -27,7 +27,9 @@ scores_plan <- drake_plan(
           lids <- c(lids, list(part))
         }
       }
-      bind_rows(lids) %>% as.data.table()
+      bind_rows(lids) %>% 
+        recode_datasets() %>%
+        as.data.table()
     },
     format = "fst_dt"
   ),
@@ -48,6 +50,7 @@ scores_plan <- drake_plan(
       }
       bind_rows(rcs) %>% 
         mutate(logrc = 1/log(rc)) %>%
+        recode_datasets() %>%
         as.data.table()
     },
     format = "fst_dt"
@@ -71,6 +74,7 @@ scores_plan <- drake_plan(
       }
       bind_rows(expansions) %>%
         mutate(logexp = 1/log(expansion)) %>%
+        recode_datasets() %>%
         as.data.table()
     },
     format = "fst_dt"
@@ -114,21 +118,21 @@ scores_plan <- drake_plan(
     p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
     save_figure(plot=p, 
                 basename="imgs/density-lid", 
-                tex_width=2.8, tex_height=2.25,
+                tex_width=2.8, tex_height=2.8,
                 png_width=5, png_height=3)
   },  
   plot_rc_distribution = {
     p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=TRUE)
     save_figure(plot=p, 
                 basename="imgs/density-rc", 
-                tex_width=2.8, tex_height=2.25,
+                tex_width=2.8, tex_height=2.8,
                 png_width=5, png_height=3)
   },  
   plot_exp_distribution = {
     p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/100", param_low="10/20", xlab="1/log(Expansion)", xmax=200)
     save_figure(plot=p, 
                 basename="imgs/density-expansion", 
-                tex_width=2.8, tex_height=2.25,
+                tex_width=2.8, tex_height=2.8,
                 png_width=5, png_height=3)
   },  
 
