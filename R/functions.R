@@ -1364,5 +1364,71 @@ plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
            dpi=300)
 }  
   
-  
+plot_score_distribution <- function(distribution, score, param, param_low, param_high, xlab, xmax=NA, reverse=F) {
+  maxval <- distribution %>% summarise(max({{score}})) %>% pull()
+  if (!is.na(xmax)) {
+    maxval <- min(xmax, maxval)
+  }
+
+  ordering <- if (reverse) {
+    function(d) {d}
+  } else {
+    function(d) {desc(d)}
+  }
+
+  datasets <- distribution %>%
+    filter({{param}} == param_low) %>%
+    arrange(dataset, ordering({{score}})) %>%
+    group_by(dataset) %>%
+    slice(10000) %>%
+    ungroup() %>%
+    mutate(
+      hard_threshold = {{score}},
+      dataset_id = row_number(ordering(desc(hard_threshold)))
+    ) %>%
+    select(dataset, dataset_id, hard_threshold)
+
+  distribution <- inner_join(distribution, datasets)
+  plot_data_high <- distribution %>% 
+    as_tibble() %>%
+    filter({{ param }} == param_high)
+  plot_data_low <- distribution %>% 
+    as_tibble() %>%
+    filter({{ param }} == param_low)
+
+  p <- ggplot(plot_data_high, aes(x={{ score }}, y=dataset_id, group=dataset)) +
+    geom_density_ridges(scale=.95,
+                        rel_min_height = 0.0001,
+                        size=0.3,
+                        color="black",
+                        quantile_lines=T) +
+    geom_density_ridges(scale=.95,
+                        data=plot_data_low,
+                        color="red",
+                        fill="red",
+                        size=0.3,
+                        alpha=0.3,
+                        rel_min_height = 0.0001,
+                        quantile_lines=T) +
+    geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
+                  data=datasets,
+                  color="steelblue",
+                  size=0.3) +
+    geom_text(aes(y=dataset_id + 0.3, label=dataset, x=maxval),
+              data=datasets,
+              hjust="right",
+              size = 2) +
+    scale_x_continuous(limits=c(NA, xmax)) +
+    labs(y="",
+         x=xlab) +
+    coord_cartesian(clip = "on") +
+    theme_bw() +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(size=8))
+
+    p
+}  
   

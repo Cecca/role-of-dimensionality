@@ -1,2 +1,6 @@
 data
 results
+*.parquet
+*.csv.bz2
+workloads
+renv

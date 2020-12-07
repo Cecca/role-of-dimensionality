@@ -46,7 +46,9 @@ scores_plan <- drake_plan(
           rcs <- c(rcs, list(part))
         }
       }
-      bind_rows(rcs) %>% as.data.table()
+      bind_rows(rcs) %>% 
+        mutate(logrc = 1/log(rc)) %>%
+        as.data.table()
     },
     format = "fst_dt"
   ),
@@ -67,7 +69,9 @@ scores_plan <- drake_plan(
           expansions <- c(expansions, list(part))
         }
       }
-      bind_rows(expansions) %>% as.data.table()
+      bind_rows(expansions) %>%
+        mutate(logexp = 1/log(expansion)) %>%
+        as.data.table()
     },
     format = "fst_dt"
   ),
@@ -105,6 +109,19 @@ scores_plan <- drake_plan(
   plot_lid_displacement = plot_displacements(lid_displacement, x=rank10, y=rank100, filename=file_out("imgs/lid_displacement.png")),
   plot_rc_displacement = plot_displacements(rc_displacement, x=rank10, y=rank100, filename=file_out("imgs/rc_displacement.png")),
   plot_expansion_displacement = plot_displacements(expansion_displacement, x=rank100, y=rank20, filename=file_out("imgs/expansion_displacement.png")),
+
+  plot_lid_distribution = {
+    p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
+    ggsave(filename="imgs/lid_distribution.png", width=5, height=3, dpi=300)
+  },  
+  plot_rc_distribution = {
+    p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=TRUE)
+    ggsave(filename="imgs/rc_distribution.png", width=5, height=3, dpi=300)
+  },  
+  plot_exp_distribution = {
+    p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/100", param_low="10/20", xlab="1/log(Expansion)", xmax=200)
+    ggsave(filename="imgs/exp_distribution.png", width=5, height=3, dpi=300)
+  },  
 
 )
 

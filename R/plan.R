@@ -1,46 +1,46 @@
-expansion_files <- list(
-  "fashion-mnist-784-euclidean-expansion.txt",
-  "glove-100-angular-expansion.txt",
-  "glove-2m-300-angular-expansion.txt",
-  "gnews-300-angular-expansion.txt",
-  "mnist-784-euclidean-expansion.txt",
-  "sift-128-euclidean-expansion.txt"
-)
+# expansion_files <- list(
+#   "fashion-mnist-784-euclidean-expansion.txt",
+#   "glove-100-angular-expansion.txt",
+#   "glove-2m-300-angular-expansion.txt",
+#   "gnews-300-angular-expansion.txt",
+#   "mnist-784-euclidean-expansion.txt",
+#   "sift-128-euclidean-expansion.txt"
+# )
 
-rc_files <- list(
-  "fashion-mnist-784-euclidean-rc.txt",
-  "glove-100-angular-rc.txt",
-  "glove-2m-300-angular-rc.txt",
-  "gnews-300-angular-rc.txt",
-  "mnist-784-euclidean-rc.txt",
-  "sift-128-euclidean-rc.txt"
-)
+# rc_files <- list(
+#   "fashion-mnist-784-euclidean-rc.txt",
+#   "glove-100-angular-rc.txt",
+#   "glove-2m-300-angular-rc.txt",
+#   "gnews-300-angular-rc.txt",
+#   "mnist-784-euclidean-rc.txt",
+#   "sift-128-euclidean-rc.txt"
+# )
 
-lid_files <- list(
-  "fashion-mnist-784-euclidean-lid.txt",
-  "glove-100-angular-lid.txt",
-  "glove-2m-300-angular-lid.txt",
-  "gnews-300-angular-lid.txt",
-  "mnist-784-euclidean-lid.txt",
-  "sift-128-euclidean-lid.txt"
-)
+# lid_files <- list(
+#   "fashion-mnist-784-euclidean-lid.txt",
+#   "glove-100-angular-lid.txt",
+#   "glove-2m-300-angular-lid.txt",
+#   "gnews-300-angular-lid.txt",
+#   "mnist-784-euclidean-lid.txt",
+#   "sift-128-euclidean-lid.txt"
+# )
 
 # Check that files are all there
-for (f in lid_files) {
-  if (!file.exists(here(f))) {
-    stop("Missing LID file")
-  }
-}
-for (f in expansion_files) {
-  if (!file.exists(here(f))) {
-    stop("Missing Expansion file")
-  }
-}
-for (f in lrc_files) {
-  if (!file.exists(here(f))) {
-    stop("Missing RC file")
-  }
-}
+# for (f in lid_files) {
+#   if (!file.exists(here(f))) {
+#     stop("Missing LID file")
+#   }
+# }
+# for (f in expansion_files) {
+#   if (!file.exists(here(f))) {
+#     stop("Missing Expansion file")
+#   }
+# }
+# for (f in lrc_files) {
+#   if (!file.exists(here(f))) {
+#     stop("Missing RC file")
+#   }
+# }
 if (!file.exists("detail.parquet")) {
   stop("Missing detail.parquet file")
 }
@@ -222,392 +222,392 @@ plan <- drake_plan(
   },
   
   # ------- Distribution plots ----------
-  expansion_scores_part = target(
-    read_delim(expansion_file,
-               col_types = "id",
-               col_names = c("id", "expansion"),
-               delim = " ") %>% 
-      mutate(dataset = expansion_file),
-    transform = map(expansion_file = !!expansion_files)
-  ),
-  expansion_scores = target(
-    bind_rows(expansion_scores_part) %>% recode_datasets(),
-    transform = combine(expansion_scores_part)
-  ),
+  # expansion_scores_part = target(
+  #   read_delim(expansion_file,
+  #              col_types = "id",
+  #              col_names = c("id", "expansion"),
+  #              delim = " ") %>% 
+  #     mutate(dataset = expansion_file),
+  #   transform = map(expansion_file = !!expansion_files)
+  # ),
+  # expansion_scores = target(
+  #   bind_rows(expansion_scores_part) %>% recode_datasets(),
+  #   transform = combine(expansion_scores_part)
+  # ),
   
-  rc_scores_part = target(
-    read_delim(rc_file,
-               col_types = "id",
-               col_names = c("id", "rc"),
-               delim = " ") %>% 
-      mutate(dataset = rc_file %>% str_remove("-rc")),
-    transform = map(rc_file = !!rc_files)
-  ),
-  rc_scores = target(
-    bind_rows(rc_scores_part) %>% recode_datasets(),
-    transform = combine(rc_scores_part)
-  ),
+  # rc_scores_part = target(
+  #   read_delim(rc_file,
+  #              col_types = "id",
+  #              col_names = c("id", "rc"),
+  #              delim = " ") %>% 
+  #     mutate(dataset = rc_file %>% str_remove("-rc")),
+  #   transform = map(rc_file = !!rc_files)
+  # ),
+  # rc_scores = target(
+  #   bind_rows(rc_scores_part) %>% recode_datasets(),
+  #   transform = combine(rc_scores_part)
+  # ),
   
-  lid_scores_part = target(
-    read_delim(lid_file,
-               col_types = "id",
-               col_names = c("id", "lid"),
-               delim = " ") %>% 
-      mutate(dataset = lid_file %>% str_remove("-new")),
-    transform = map(lid_file = !!lid_files)
-  ),
-  lid_scores = target(
-    bind_rows(lid_scores_part) %>% recode_datasets(),
-    transform = combine(lid_scores_part)
-  ),
+  # lid_scores_part = target(
+  #   read_delim(lid_file,
+  #              col_types = "id",
+  #              col_names = c("id", "lid"),
+  #              delim = " ") %>% 
+  #     mutate(dataset = lid_file %>% str_remove("-new")),
+  #   transform = map(lid_file = !!lid_files)
+  # ),
+  # lid_scores = target(
+  #   bind_rows(lid_scores_part) %>% recode_datasets(),
+  #   transform = combine(lid_scores_part)
+  # ),
   
-  difficulty_scores = inner_join(lid_scores, expansion_scores) %>% 
-    inner_join(rc_scores),
+  # difficulty_scores = inner_join(lid_scores, expansion_scores) %>% 
+  #   inner_join(rc_scores),
   
-  difficulties_to_plot = {
-    difficulty_scores %>% 
-      group_by(dataset, ntile(expansion, 100)) %>% 
-      sample_n(min(100, n())) %>% 
-      ungroup()
-  },
+  # difficulties_to_plot = {
+  #   difficulty_scores %>% 
+  #     group_by(dataset, ntile(expansion, 100)) %>% 
+  #     sample_n(min(100, n())) %>% 
+  #     ungroup()
+  # },
   
-  scores_correlation = difficulty_scores %>% 
-    group_by(dataset) %>% 
-    summarise(corr_lid_exp = cor(lid, expansion),
-              corr_lid_lrc = cor(lid, rc),
-              corr_exp_lrc = cor(expansion, rc)),
+  # scores_correlation = difficulty_scores %>% 
+  #   group_by(dataset) %>% 
+  #   summarise(corr_lid_exp = cor(lid, expansion),
+  #             corr_lid_lrc = cor(lid, rc),
+  #             corr_exp_lrc = cor(expansion, rc)),
   
-  scores_correlation_pearson = {
-    lid_exp <- difficulty_scores %>% 
-      group_by(dataset) %>% 
-      summarise(
-        corr = list(cor.test(lid, expansion, method="pearson") %>% broom::tidy())
-      ) %>% 
-      unnest(corr) %>% 
-      select(dataset, corr_lid_exp=estimate, p_lid_exp=p.value)
-    lid_lrc <- difficulty_scores %>% 
-      group_by(dataset) %>% 
-      summarise(
-        corr = list(cor.test(lid, rc, method="pearson") %>% broom::tidy())
-      ) %>% 
-      unnest(corr) %>% 
-      select(dataset, corr_lid_lrc=estimate, p_lid_lrc=p.value)
-    exp_lrc <- difficulty_scores %>% 
-      group_by(dataset) %>% 
-      summarise(
-        corr = list(cor.test(expansion, rc, method="pearson") %>% broom::tidy())
-      ) %>% 
-      unnest(corr) %>% 
-      select(dataset, corr_exp_lrc=estimate, p_exp_lrc=p.value)
-    inner_join(lid_exp, lid_lrc) %>% 
-      inner_join(exp_lrc)
-  },
+  # scores_correlation_pearson = {
+  #   lid_exp <- difficulty_scores %>% 
+  #     group_by(dataset) %>% 
+  #     summarise(
+  #       corr = list(cor.test(lid, expansion, method="pearson") %>% broom::tidy())
+  #     ) %>% 
+  #     unnest(corr) %>% 
+  #     select(dataset, corr_lid_exp=estimate, p_lid_exp=p.value)
+  #   lid_lrc <- difficulty_scores %>% 
+  #     group_by(dataset) %>% 
+  #     summarise(
+  #       corr = list(cor.test(lid, rc, method="pearson") %>% broom::tidy())
+  #     ) %>% 
+  #     unnest(corr) %>% 
+  #     select(dataset, corr_lid_lrc=estimate, p_lid_lrc=p.value)
+  #   exp_lrc <- difficulty_scores %>% 
+  #     group_by(dataset) %>% 
+  #     summarise(
+  #       corr = list(cor.test(expansion, rc, method="pearson") %>% broom::tidy())
+  #     ) %>% 
+  #     unnest(corr) %>% 
+  #     select(dataset, corr_exp_lrc=estimate, p_exp_lrc=p.value)
+  #   inner_join(lid_exp, lid_lrc) %>% 
+  #     inner_join(exp_lrc)
+  # },
   
-  plot_scores_correlation = scores_correlation %>% 
-    tidyr::gather(corr_lid_exp, corr_lid_lrc, corr_exp_lrc, 
-                  key="pair", value="correlation") %>% 
-    ggplot(aes(dataset, abs(correlation), color=pair)) + 
-    geom_point() + 
-    coord_cartesian(ylim=c(0,1)),
+  # plot_scores_correlation = scores_correlation %>% 
+  #   tidyr::gather(corr_lid_exp, corr_lid_lrc, corr_exp_lrc, 
+  #                 key="pair", value="correlation") %>% 
+  #   ggplot(aes(dataset, abs(correlation), color=pair)) + 
+  #   geom_point() + 
+  #   coord_cartesian(ylim=c(0,1)),
   
-  plot_scores_lid_exp = target(
-    difficulties_to_plot %>% 
-      filter(dataset == dat) %>% 
-      do_scatter_distribution_lid_exp(),
-    transform = map(dat = !!datasets)
-  ),
-  plot_scores_lid_lrc = target(
-    difficulties_to_plot %>% 
-      filter(dataset == dat) %>% 
-      do_scatter_distribution_lid_lrc(),
-    transform = map(dat = !!datasets)
-  ),
-  plot_scores_lrc_exp = target(
-    difficulties_to_plot %>% 
-      filter(dataset == dat) %>% 
-      do_scatter_distribution_lrc_exp(),
-    transform = map(dat = !!datasets)
-  ),
+  # plot_scores_lid_exp = target(
+  #   difficulties_to_plot %>% 
+  #     filter(dataset == dat) %>% 
+  #     do_scatter_distribution_lid_exp(),
+  #   transform = map(dat = !!datasets)
+  # ),
+  # plot_scores_lid_lrc = target(
+  #   difficulties_to_plot %>% 
+  #     filter(dataset == dat) %>% 
+  #     do_scatter_distribution_lid_lrc(),
+  #   transform = map(dat = !!datasets)
+  # ),
+  # plot_scores_lrc_exp = target(
+  #   difficulties_to_plot %>% 
+  #     filter(dataset == dat) %>% 
+  #     do_scatter_distribution_lrc_exp(),
+  #   transform = map(dat = !!datasets)
+  # ),
   
-  save_scores_lid_exp = target({
-      ggsave(filename = here("imgs", str_c(dat, "-scores-lid-exp.png")),
-             plot = plot_scores_lid_exp,
-             width=8, height=8,
-             units = "cm")
-    },
-    transform = map(plot_scores_lid_exp)
-  ),
-  save_score_lid_lrc = target({
-      ggsave(filename = here("imgs", str_c(dat, "-scores-lid-lrc.png")),
-             plot = plot_scores_lid_lrc,
-             width=8, height=8,
-             units = "cm")
-    },
-    transform = map(plot_scores_lid_lrc)
-  ),
-  save_scores_lrc_exp = target({
-      ggsave(filename = here("imgs", str_c(dat, "-scores-lrc-exp.png")),
-             plot = plot_scores_lrc_exp,
-             width=8, height=8,
-             units = "cm")
-    },
-    transform = map(plot_scores_lrc_exp)
-  ),
+  # save_scores_lid_exp = target({
+  #     ggsave(filename = here("imgs", str_c(dat, "-scores-lid-exp.png")),
+  #            plot = plot_scores_lid_exp,
+  #            width=8, height=8,
+  #            units = "cm")
+  #   },
+  #   transform = map(plot_scores_lid_exp)
+  # ),
+  # save_score_lid_lrc = target({
+  #     ggsave(filename = here("imgs", str_c(dat, "-scores-lid-lrc.png")),
+  #            plot = plot_scores_lid_lrc,
+  #            width=8, height=8,
+  #            units = "cm")
+  #   },
+  #   transform = map(plot_scores_lid_lrc)
+  # ),
+  # save_scores_lrc_exp = target({
+  #     ggsave(filename = here("imgs", str_c(dat, "-scores-lrc-exp.png")),
+  #            plot = plot_scores_lrc_exp,
+  #            width=8, height=8,
+  #            units = "cm")
+  #   },
+  #   transform = map(plot_scores_lrc_exp)
+  # ),
   
   
-  difficult_threshold_lid = difficulty_scores %>% 
-    group_by(dataset) %>% 
-    arrange(lid) %>% 
-    slice(n() - 10000) %>% 
-    transmute(hard_threshold = lid) %>% 
-    ungroup() %>% 
-    mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
-    arrange(dataset) %>% 
-    mutate(dataset_id = row_number()),
+  # difficult_threshold_lid = difficulty_scores %>% 
+  #   group_by(dataset) %>% 
+  #   arrange(lid) %>% 
+  #   slice(n() - 10000) %>% 
+  #   transmute(hard_threshold = lid) %>% 
+  #   ungroup() %>% 
+  #   mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
+  #   arrange(dataset) %>% 
+  #   mutate(dataset_id = row_number()),
   
-  difficult_threshold_expansion = difficulty_scores %>% 
-    group_by(dataset) %>% 
-    arrange(expansion) %>% 
-    slice(10000) %>% 
-    transmute(hard_threshold = expansion) %>% 
-    ungroup() %>% 
-    inner_join(difficult_threshold_lid %>% rename(thresh_lid = hard_threshold)) %>% 
-    mutate(dataset = fct_reorder(dataset, thresh_lid)) %>% 
-    arrange(dataset) %>% 
-    mutate(dataset_id = row_number()),
+  # difficult_threshold_expansion = difficulty_scores %>% 
+  #   group_by(dataset) %>% 
+  #   arrange(expansion) %>% 
+  #   slice(10000) %>% 
+  #   transmute(hard_threshold = expansion) %>% 
+  #   ungroup() %>% 
+  #   inner_join(difficult_threshold_lid %>% rename(thresh_lid = hard_threshold)) %>% 
+  #   mutate(dataset = fct_reorder(dataset, thresh_lid)) %>% 
+  #   arrange(dataset) %>% 
+  #   mutate(dataset_id = row_number()),
   
-  difficult_threshold_rc = difficulty_scores %>% 
-    group_by(dataset) %>% 
-    arrange(rc) %>% 
-    slice(10000) %>% 
-    transmute(hard_threshold = rc) %>% 
-    ungroup() %>% 
-    mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
-    arrange(desc(dataset)) %>% 
-    mutate(dataset_id = row_number()),
+  # difficult_threshold_rc = difficulty_scores %>% 
+  #   group_by(dataset) %>% 
+  #   arrange(rc) %>% 
+  #   slice(10000) %>% 
+  #   transmute(hard_threshold = rc) %>% 
+  #   ungroup() %>% 
+  #   mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
+  #   arrange(desc(dataset)) %>% 
+  #   mutate(dataset_id = row_number()),
   
-  density_lid_plot = {
-    plot_data <- difficulty_scores %>% 
-      group_by(dataset) %>% 
-      ungroup() %>% 
-      inner_join(difficult_threshold_lid) %>% 
-      mutate(dataset = fct_reorder(dataset, hard_threshold))
-    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(lid))
-    outliers <- inner_join(iqrs, plot_data) %>% 
-      filter(lid > 3*iqr) %>% 
-      group_by(dataset) %>% 
-      arrange(desc(expansion)) %>% 
-      slice(which(row_number() %% 100 == 1))
-    message("Number of outliers", nrow(outliers))
-    ggplot(plot_data, aes(x=lid, y=dataset_id, group=dataset)) +
-      geom_density_ridges(scale=.95,
-                          rel_min_height = 0.0001,
-                          quantile_lines=T) +
-      geom_point(data=outliers,
-                 shape=46,
-                 size=.1) +
-      geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
-                   data=difficult_threshold_lid,
-                   color="red",
-                   size=1) +
-      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=120),
-                 data=difficult_threshold_lid,
-                 hjust="right",
-                 size = 2) +
-      labs(y="",
-           x="Local Intrinsic Dimensionality") +
-      coord_cartesian(clip = "on") +
-      theme_bw() +
-      theme(axis.text.y = element_blank(),
-            axis.ticks.y = element_blank(),
-            text = element_text(size=8))
-  },
+  # density_lid_plot = {
+  #   plot_data <- difficulty_scores %>% 
+  #     group_by(dataset) %>% 
+  #     ungroup() %>% 
+  #     inner_join(difficult_threshold_lid) %>% 
+  #     mutate(dataset = fct_reorder(dataset, hard_threshold))
+  #   iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(lid))
+  #   outliers <- inner_join(iqrs, plot_data) %>% 
+  #     filter(lid > 3*iqr) %>% 
+  #     group_by(dataset) %>% 
+  #     arrange(desc(expansion)) %>% 
+  #     slice(which(row_number() %% 100 == 1))
+  #   message("Number of outliers", nrow(outliers))
+  #   ggplot(plot_data, aes(x=lid, y=dataset_id, group=dataset)) +
+  #     geom_density_ridges(scale=.95,
+  #                         rel_min_height = 0.0001,
+  #                         quantile_lines=T) +
+  #     geom_point(data=outliers,
+  #                shape=46,
+  #                size=.1) +
+  #     geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
+  #                  data=difficult_threshold_lid,
+  #                  color="red",
+  #                  size=1) +
+  #     geom_text(aes(y=dataset_id + 0.3, label=dataset, x=120),
+  #                data=difficult_threshold_lid,
+  #                hjust="right",
+  #                size = 2) +
+  #     labs(y="",
+  #          x="Local Intrinsic Dimensionality") +
+  #     coord_cartesian(clip = "on") +
+  #     theme_bw() +
+  #     theme(axis.text.y = element_blank(),
+  #           axis.ticks.y = element_blank(),
+  #           text = element_text(size=8))
+  # },
   
-  density_plot_lid_tex = {
-    tikz(here("imgs", "density-lid.tex"),
-         width = 2.8, height = 2.25)
-    print(density_lid_plot)
-    dev.off()
-  },
+  # density_plot_lid_tex = {
+  #   tikz(here("imgs", "density-lid.tex"),
+  #        width = 2.8, height = 2.25)
+  #   print(density_lid_plot)
+  #   dev.off()
+  # },
   
-  density_lid_compare_plot = {
-    plot_data <- difficulty_scores %>% 
-      inner_join(lid10_scores) %>% 
-      group_by(dataset) %>% 
-      ungroup() %>% 
-      inner_join(difficult_threshold_lid) %>% 
-      mutate(dataset = fct_reorder(dataset, hard_threshold))
-    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(lid))
-    outliers <- inner_join(iqrs, plot_data) %>% 
-      filter(lid > 3*iqr) %>% 
-      group_by(dataset) %>% 
-      arrange(desc(expansion)) %>% 
-      slice(which(row_number() %% 100 == 1))
-    message("Number of outliers", nrow(outliers))
-    ggplot(plot_data, aes(x=lid, y=dataset_id, group=dataset)) +
-      geom_density_ridges(scale=.95,
-                          rel_min_height = 0.0001,
-                          quantile_lines=T) +
-      geom_density_ridges(mapping=aes(x=lid10),
-                          alpha=0.2,
-                          color="red",
-                          scale=.95,
-                          rel_min_height = 0.0001,
-                          quantile_lines=T) +
-      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=120),
-                 data=difficult_threshold_lid,
-                 hjust="right",
-                 size = 2) +
-      labs(y="",
-           x="Local Intrinsic Dimensionality") +
-      coord_cartesian(clip = "on") +
-      theme_bw() +
-      theme(axis.text.y = element_blank(),
-            axis.ticks.y = element_blank(),
-            text = element_text(size=8))
-  },
+  # density_lid_compare_plot = {
+  #   plot_data <- difficulty_scores %>% 
+  #     inner_join(lid10_scores) %>% 
+  #     group_by(dataset) %>% 
+  #     ungroup() %>% 
+  #     inner_join(difficult_threshold_lid) %>% 
+  #     mutate(dataset = fct_reorder(dataset, hard_threshold))
+  #   iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(lid))
+  #   outliers <- inner_join(iqrs, plot_data) %>% 
+  #     filter(lid > 3*iqr) %>% 
+  #     group_by(dataset) %>% 
+  #     arrange(desc(expansion)) %>% 
+  #     slice(which(row_number() %% 100 == 1))
+  #   message("Number of outliers", nrow(outliers))
+  #   ggplot(plot_data, aes(x=lid, y=dataset_id, group=dataset)) +
+  #     geom_density_ridges(scale=.95,
+  #                         rel_min_height = 0.0001,
+  #                         quantile_lines=T) +
+  #     geom_density_ridges(mapping=aes(x=lid10),
+  #                         alpha=0.2,
+  #                         color="red",
+  #                         scale=.95,
+  #                         rel_min_height = 0.0001,
+  #                         quantile_lines=T) +
+  #     geom_text(aes(y=dataset_id + 0.3, label=dataset, x=120),
+  #                data=difficult_threshold_lid,
+  #                hjust="right",
+  #                size = 2) +
+  #     labs(y="",
+  #          x="Local Intrinsic Dimensionality") +
+  #     coord_cartesian(clip = "on") +
+  #     theme_bw() +
+  #     theme(axis.text.y = element_blank(),
+  #           axis.ticks.y = element_blank(),
+  #           text = element_text(size=8))
+  # },
   
-  density_expansion_plot = {
-    plot_data <- difficulty_scores %>% 
-      group_by(dataset) %>% 
-      arrange(expansion) %>% 
-      ungroup() %>% 
-      inner_join(difficult_threshold_expansion) %>% 
-      mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
-      filter(expansion <= 1.5)
-    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(expansion))
-    outliers <- inner_join(iqrs, plot_data) %>% 
-      filter(rc > 50*iqr) %>% 
-      group_by(dataset) %>% 
-      arrange(desc(expansion)) %>% 
-      slice(which(row_number() %% 100 == 1))
-    message("Number of outliers", nrow(outliers))
-    label_x <- plot_data %>% ungroup() %>% summarise(max(expansion)) %>% pull()
-    ggplot(plot_data, aes(x=expansion, y=dataset_id, group=dataset)) +
-      geom_density_ridges(scale=.95,
-                          rel_min_height = 0.001,
-                          quantile_lines=T) +
-      geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
-                   data=difficult_threshold_expansion,
-                   color="red",
-                   size=1) +
-      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
-                 data=difficult_threshold_expansion,
-                 hjust="right",
-                 size=2) +
-      scale_x_continuous(trans=log_trans(1.1), breaks=c(1,1.1,1.3,1.5)) +
-      labs(y="",
-           x="Expansion") +
-      coord_cartesian(clip = "on") +
-      theme_bw() +
-      theme(axis.text.y = element_blank(),
-            axis.ticks.y = element_blank(),
-            text = element_text(size=8))
-  },
+  # density_expansion_plot = {
+  #   plot_data <- difficulty_scores %>% 
+  #     group_by(dataset) %>% 
+  #     arrange(expansion) %>% 
+  #     ungroup() %>% 
+  #     inner_join(difficult_threshold_expansion) %>% 
+  #     mutate(dataset = fct_reorder(dataset, hard_threshold)) %>% 
+  #     filter(expansion <= 1.5)
+  #   iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(expansion))
+  #   outliers <- inner_join(iqrs, plot_data) %>% 
+  #     filter(rc > 50*iqr) %>% 
+  #     group_by(dataset) %>% 
+  #     arrange(desc(expansion)) %>% 
+  #     slice(which(row_number() %% 100 == 1))
+  #   message("Number of outliers", nrow(outliers))
+  #   label_x <- plot_data %>% ungroup() %>% summarise(max(expansion)) %>% pull()
+  #   ggplot(plot_data, aes(x=expansion, y=dataset_id, group=dataset)) +
+  #     geom_density_ridges(scale=.95,
+  #                         rel_min_height = 0.001,
+  #                         quantile_lines=T) +
+  #     geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
+  #                  data=difficult_threshold_expansion,
+  #                  color="red",
+  #                  size=1) +
+  #     geom_text(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
+  #                data=difficult_threshold_expansion,
+  #                hjust="right",
+  #                size=2) +
+  #     scale_x_continuous(trans=log_trans(1.1), breaks=c(1,1.1,1.3,1.5)) +
+  #     labs(y="",
+  #          x="Expansion") +
+  #     coord_cartesian(clip = "on") +
+  #     theme_bw() +
+  #     theme(axis.text.y = element_blank(),
+  #           axis.ticks.y = element_blank(),
+  #           text = element_text(size=8))
+  # },
   
-  density_plot_expansion_tex = {
-    tikz(here("imgs", "density-expansion.tex"),
-         width = 2.8, height = 2.25)
-    print(density_expansion_plot)
-    dev.off()
-  },
+  # density_plot_expansion_tex = {
+  #   tikz(here("imgs", "density-expansion.tex"),
+  #        width = 2.8, height = 2.25)
+  #   print(density_expansion_plot)
+  #   dev.off()
+  # },
   
-  density_rc_plot = {
-    plot_data <- difficulty_scores %>% 
-      inner_join(difficult_threshold_rc) %>% 
-      mutate(dataset = fct_reorder(dataset, hard_threshold))
-    iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(rc))
-    outliers <- inner_join(iqrs, plot_data) %>% 
-      filter(rc > 10*iqr) %>% 
-      group_by(dataset) %>% 
-      arrange(desc(rc)) %>% 
-      slice(which(row_number() %% 100 == 1))
-    message("Number of outliers", nrow(outliers))
-    label_x <- plot_data %>% ungroup() %>% summarise(max(rc)) %>% pull()
-    ggplot(plot_data, aes(x=rc, y=dataset_id, group=dataset)) +
-      geom_density_ridges(scale=.95,
-                          rel_min_height = 0.001,
-                          quantile_lines=T) +
-      geom_point(data=outliers,
-                 shape=46,
-                 size=.1) +
-      geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
-                   data=difficult_threshold_rc,
-                   color="red",
-                   size=1) +
-      geom_text(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
-                 data=difficult_threshold_rc,
-                 hjust="right",
-                 size = 2) +
-      scale_x_log10() +
-      labs(y="",
-           x="Relative contrast") +
-      coord_cartesian(clip = "on") +
-      theme_bw() +
-      theme(axis.text.y = element_blank(),
-            axis.ticks.y = element_blank(),
-            text = element_text(size=8))
-  },
+  # density_rc_plot = {
+  #   plot_data <- difficulty_scores %>% 
+  #     inner_join(difficult_threshold_rc) %>% 
+  #     mutate(dataset = fct_reorder(dataset, hard_threshold))
+  #   iqrs <- plot_data %>% group_by(dataset) %>% summarise(iqr = IQR(rc))
+  #   outliers <- inner_join(iqrs, plot_data) %>% 
+  #     filter(rc > 10*iqr) %>% 
+  #     group_by(dataset) %>% 
+  #     arrange(desc(rc)) %>% 
+  #     slice(which(row_number() %% 100 == 1))
+  #   message("Number of outliers", nrow(outliers))
+  #   label_x <- plot_data %>% ungroup() %>% summarise(max(rc)) %>% pull()
+  #   ggplot(plot_data, aes(x=rc, y=dataset_id, group=dataset)) +
+  #     geom_density_ridges(scale=.95,
+  #                         rel_min_height = 0.001,
+  #                         quantile_lines=T) +
+  #     geom_point(data=outliers,
+  #                shape=46,
+  #                size=.1) +
+  #     geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
+  #                  data=difficult_threshold_rc,
+  #                  color="red",
+  #                  size=1) +
+  #     geom_text(aes(y=dataset_id + 0.3, label=dataset, x=label_x),
+  #                data=difficult_threshold_rc,
+  #                hjust="right",
+  #                size = 2) +
+  #     scale_x_log10() +
+  #     labs(y="",
+  #          x="Relative contrast") +
+  #     coord_cartesian(clip = "on") +
+  #     theme_bw() +
+  #     theme(axis.text.y = element_blank(),
+  #           axis.ticks.y = element_blank(),
+  #           text = element_text(size=8))
+  # },
   
-  density_plot_rc_tex = {
-    tikz(here("imgs", "density-rc.tex"),
-         width = 2.8, height = 2.25)
-    print(density_rc_plot)
-    dev.off()
-  },
+  # density_plot_rc_tex = {
+  #   tikz(here("imgs", "density-rc.tex"),
+  #        width = 2.8, height = 2.25)
+  #   print(density_rc_plot)
+  #   dev.off()
+  # },
   
   
   # ------- Performance distribution scores ------------
   
-  plot_distribution = target({
-    plot_data <- detail %>%
-      filter(algorithm == algorithm_name,
-             dataset == dataset_name,
-             difficulty == difficulty_name,
-             difficulty_type == difficulty_type_name) %>% 
-      mutate(recall = recall / 10)
-    interactive_distribution_plot(plot_data)
-    },
-    transform = cross(
-      algorithm_name = !!algorithms,
-      dataset_name = !!datasets,
-      difficulty_name = !!difficulties,
-      difficulty_type_name = c("expansion", "lid")
-    )
-  ),
+  # plot_distribution = target({
+  #   plot_data <- detail %>%
+  #     filter(algorithm == algorithm_name,
+  #            dataset == dataset_name,
+  #            difficulty == difficulty_name,
+  #            difficulty_type == difficulty_type_name) %>% 
+  #     mutate(recall = recall / 10)
+  #   interactive_distribution_plot(plot_data)
+  #   },
+  #   transform = cross(
+  #     algorithm_name = !!algorithms,
+  #     dataset_name = !!datasets,
+  #     difficulty_name = !!difficulties,
+  #     difficulty_type_name = c("expansion", "lid")
+  #   )
+  # ),
   
-  figure_distribution = target(
-    htmlwidgets::saveWidget(plot_distribution,
-                            here("imgs", str_c("perf-distribution-",
-                                               dataset_name, "-",
-                                               difficulty_name, "-",
-                                               difficulty_type_name, "-",
-                                               algorithm_name,
-                                               ".html"))),
-    transform = map(plot_distribution)
-  ),
+  # figure_distribution = target(
+  #   htmlwidgets::saveWidget(plot_distribution,
+  #                           here("imgs", str_c("perf-distribution-",
+  #                                              dataset_name, "-",
+  #                                              difficulty_name, "-",
+  #                                              difficulty_type_name, "-",
+  #                                              algorithm_name,
+  #                                              ".html"))),
+  #   transform = map(plot_distribution)
+  # ),
   
-  data_performance_distribution_paper = detail %>% 
-    filter(dataset == "GLOVE-2M",
-           difficulty %in% c("middle", "diverse"),
-           difficulty_type == "lid"),
+  # data_performance_distribution_paper = detail %>% 
+  #   filter(dataset == "GLOVE-2M",
+  #          difficulty %in% c("middle", "diverse"),
+  #          difficulty_type == "lid"),
   
-  plot_performance_distribution_recall = {
-    p <- data_performance_distribution_paper %>%
-      filter(algorithm %in% algorithms) %>% 
-      static_ridges_plot_recall()
-    ggsave("imgs/distribution_recall.pdf", plot=p,
-           width = 8, height=4)
-  },
+  # plot_performance_distribution_recall = {
+  #   p <- data_performance_distribution_paper %>%
+  #     filter(algorithm %in% algorithms) %>% 
+  #     static_ridges_plot_recall()
+  #   ggsave("imgs/distribution_recall.pdf", plot=p,
+  #          width = 8, height=4)
+  # },
   
-  plot_performance_distribution_qps = data_performance_distribution_paper %>% 
-      filter(algorithm %in% algorithms) %>% 
-      static_ridges_plot_qps(),
+  # plot_performance_distribution_qps = data_performance_distribution_paper %>% 
+  #     filter(algorithm %in% algorithms) %>% 
+  #     static_ridges_plot_qps(),
   
-  figure_performance_distribution_qps = {
-    ggsave("imgs/distribution_qps.pdf", plot=plot_performance_distribution_qps,
-           width = 8, height=4)
-  },
+  # figure_performance_distribution_qps = {
+  #   ggsave("imgs/distribution_qps.pdf", plot=plot_performance_distribution_qps,
+  #          width = 8, height=4)
+  # },
   
   # ------------------ Ranking ------------------------
   plot_ranking_qps = averages %>% 
