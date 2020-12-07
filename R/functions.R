@@ -1431,4 +1431,15 @@ plot_score_distribution <- function(distribution, score, param, param_low, param
 
     p
 }  
+
+save_figure <- function(plot, basename, tex_width, tex_height, png_width, png_height) {
+  tikz(paste0(basename, ".tex"),
+       width = tex_height, height = tex_height)
+  print(plot)
+  dev.off()
+
+  ggsave(plot=plot, filename=paste0(basename, ".png"),
+         width=png_width, height=png_height, dpi=300)
+}
+
   

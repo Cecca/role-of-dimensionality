@@ -112,15 +112,24 @@ scores_plan <- drake_plan(
 
   plot_lid_distribution = {
     p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
-    ggsave(filename="imgs/lid_distribution.png", width=5, height=3, dpi=300)
+    save_figure(plot=p, 
+                basename="imgs/density-lid", 
+                tex_width=2.8, tex_height=2.25,
+                png_width=5, png_height=3)
   },  
   plot_rc_distribution = {
     p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=TRUE)
-    ggsave(filename="imgs/rc_distribution.png", width=5, height=3, dpi=300)
+    save_figure(plot=p, 
+                basename="imgs/density-rc", 
+                tex_width=2.8, tex_height=2.25,
+                png_width=5, png_height=3)
   },  
   plot_exp_distribution = {
     p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/100", param_low="10/20", xlab="1/log(Expansion)", xmax=200)
-    ggsave(filename="imgs/exp_distribution.png", width=5, height=3, dpi=300)
+    save_figure(plot=p, 
+                basename="imgs/density-expansion", 
+                tex_width=2.8, tex_height=2.25,
+                png_width=5, png_height=3)
   },  
 
 )
