@@ -86,8 +86,8 @@ scores_plan <- drake_plan(
       ranks <- dt %>% 
         as_tibble() %>% 
         group_by(dataset) %>% 
-        mutate(rank10 = percent_rank(desc(`10`)),
-               rank100 = percent_rank(desc(`100`)))
+        mutate(rank10 = row_number(desc(`10`)),
+               rank100 = row_number(desc(`100`)))
     },
 
   rc_displacement =
@@ -96,8 +96,8 @@ scores_plan <- drake_plan(
       ranks <- dt %>% 
         as_tibble() %>% 
         group_by(dataset) %>% 
-        mutate(rank10 = percent_rank(desc(`10`)),
-               rank100 = percent_rank(desc(`100`)))
+        mutate(rank10 = row_number(desc(`10`)),
+               rank100 = row_number(desc(`100`)))
     },
 
   expansion_displacement =
@@ -106,13 +106,53 @@ scores_plan <- drake_plan(
       ranks <- dt %>% 
         as_tibble() %>% 
         group_by(dataset) %>% 
-        mutate(rank100 = percent_rank(desc(`10/100`)),
-               rank20 = percent_rank(desc(`10/20`)))
+        mutate(rank100 = row_number(desc(`5/100`)),
+               rank20 = row_number(desc(`10/20`)))
     },
 
-  plot_lid_displacement = plot_displacements(lid_displacement, x=rank10, y=rank100, filename=file_out("imgs/lid_displacement.png")),
-  plot_rc_displacement = plot_displacements(rc_displacement, x=rank10, y=rank100, filename=file_out("imgs/rc_displacement.png")),
-  plot_expansion_displacement = plot_displacements(expansion_displacement, x=rank100, y=rank20, filename=file_out("imgs/expansion_displacement.png")),
+  plot_lid_displacement = {
+    p <- plot_displacements2(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
+    save_figure(plot=p, 
+                basename="imgs/lid_displacement", 
+                tex_width=11.2, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+  plot_rc_displacement = {
+    p <- plot_displacements2(rc_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
+    save_figure(plot=p, 
+                basename="imgs/rc_displacement", 
+                tex_width=11.2, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+  plot_expansion_displacement = {
+    p <- plot_displacements2(expansion_displacement, rank_accurate=rank100, rank_less_accurate=rank20)
+    save_figure(plot=p, 
+                basename="imgs/expansion_displacement", 
+                tex_width=11.2, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+
+  plot_lid_heatmap = {
+    p <- plot_heatmap(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
+    save_figure(plot=p, 
+                basename="imgs/lid_heatmap", 
+                tex_width=11.2, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+  plot_rc_heatmap = {
+    p <- plot_heatmap(rc_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
+    save_figure(plot=p, 
+                basename="imgs/rc_heatmap", 
+                tex_width=11.2, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+  plot_expansion_heatmap = {
+    p <- plot_heatmap(expansion_displacement, rank_accurate=rank100, rank_less_accurate=rank20)
+    save_figure(plot=p, 
+                basename="imgs/expansion_heatmap", 
+                tex_width=11.2, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
 
   plot_lid_distribution = {
     p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
@@ -122,19 +162,19 @@ scores_plan <- drake_plan(
                 png_width=5, png_height=3)
   },  
   plot_rc_distribution = {
-    p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=TRUE)
+    p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=FALSE)
     save_figure(plot=p, 
                 basename="imgs/density-rc", 
                 tex_width=2.8, tex_height=2.8,
                 png_width=5, png_height=3)
   },  
   plot_exp_distribution = {
-    p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/100", param_low="10/20", xlab="1/log(Expansion)", xmax=200)
+    p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/20", param_low="5/100", xlab="1/log(Expansion)", xmax=200)
     save_figure(plot=p, 
                 basename="imgs/density-expansion", 
                 tex_width=2.8, tex_height=2.8,
                 png_width=5, png_height=3)
-  },  
+  },
 
 )
 

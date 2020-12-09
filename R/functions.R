@@ -1330,7 +1330,59 @@ arrow_plot <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
-plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
+plot_heatmap <- function(data, rank_accurate, rank_less_accurate) {
+  ggplot(data, aes({{rank_accurate}}, {{rank_less_accurate}})) + 
+    stat_bin_2d(aes(fill=ntile(stat(count), n=100)), bins=100) + 
+    facet_wrap(vars(dataset), ncol=3, scales="free") + 
+    scale_fill_viridis_c() + 
+    scale_x_continuous(breaks=c(0), trans="reverse") + 
+    scale_y_continuous(breaks=c(0), trans="reverse") +
+    labs(fill="Percentile of count") +
+    theme_classic() +
+    theme(strip.background = element_blank(),
+          strip.text=element_text(hjust=0.05))
+}
+
+# This plot answers the question: given a range of ranks build with a low accuracy
+# estimator, were those points ranked very far away in the accurate ranking??
+plot_displacements2 <- function(data, rank_accurate, rank_less_accurate) {
+  grays <- rev(sequential_hcl(5, "Grays")[1:4])
+
+  data %>%
+    group_by(dataset) %>%
+    mutate(group=cut( {{rank_less_accurate}}, breaks=50, labels=F)) %>%
+    group_by(dataset, group) %>%
+    summarise(
+      acc_min = min({{ rank_accurate }}),
+      acc_max = max({{ rank_accurate }}),
+      inacc_min = min({{rank_less_accurate}}),
+      inacc_max = max({{rank_less_accurate}}),
+      inacc995 = quantile({{ rank_accurate }}, 0.995),
+      inacc90 = quantile({{ rank_accurate }}, 0.9),
+      inacc75 = quantile({{ rank_accurate }}, 0.75),
+      inacc50 = quantile({{ rank_accurate }}, 0.5),
+      inacc25 = quantile({{ rank_accurate }}, 0.25),
+      inacc10 = quantile({{ rank_accurate }}, 0.1),
+      inacc05 = quantile({{ rank_accurate }}, 0.005)
+    ) %>%
+
+  ggplot(aes(xmin=inacc_min, xmax=inacc_max, ymin=acc_min, ymax=acc_max)) +
+    geom_rect(fill=grays[1], color=NA) +
+    geom_rect(aes(ymin=inacc05, ymax=inacc995), fill=grays[2], color=NA) +
+    geom_rect(aes(ymin=inacc10, ymax=inacc90), fill=grays[3], color=NA) +
+    geom_rect(aes(ymin=inacc25, ymax=inacc75), fill=grays[4], color=NA) +
+    scale_x_continuous(breaks=c(0), trans="reverse") +
+    scale_y_continuous(breaks=c(0), trans="reverse") +
+    facet_wrap(vars(dataset),
+              scales="free",
+              ncol=3) +
+    theme_classic() +
+    theme(strip.background = element_blank(),
+          strip.text=element_text(hjust=0.05))
+
+}
+
+plot_displacements <- function(dataset, x, y, n_hard=10000) {
     pd <- dataset %>%
       mutate(group = cut({{ x }}, 10, labels = F) / 10 - 0.5/10) %>%
       group_by(dataset, group) %>%
@@ -1344,7 +1396,7 @@ plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
         y5 = quantile({{ y }}, 0.05),
         hard_mark = 1 - 10000/n(),
       )
-    p <- ggplot(pd, aes(group)) +
+    ggplot(pd, aes(group)) +
       geom_abline(intercept=0, slope=1) +
       geom_linerange(aes(ymin=ymin, ymax=ymax), color="black") +
       geom_linerange(aes(ymin=y5, ymax=y95), size=1.5, color="black") +
@@ -1357,11 +1409,11 @@ plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
       facet_wrap(vars(dataset),
                 scales="free",
                 ncol=1)
-    ggsave(plot=p,
-           filename=filename,
-           width=5,
-           height=10,
-           dpi=300)
+    # ggsave(plot=p,
+    #        filename=filename,
+    #        width=5,
+    #        height=10,
+    #        dpi=300)
 }  
   
 plot_score_distribution <- function(distribution, score, param, param_low, param_high, xlab, xmax=NA, reverse=F) {
@@ -1376,15 +1428,22 @@ plot_score_distribution <- function(distribution, score, param, param_low, param
     function(d) {desc(d)}
   }
 
+  medians <- distribution %>%
+    filter({{param}} == param_low) %>%
+    group_by(dataset) %>%
+    summarise(median_score = median({{score}})) %>%
+    ungroup()
+
   datasets <- distribution %>%
     filter({{param}} == param_low) %>%
     arrange(dataset, ordering({{score}})) %>%
     group_by(dataset) %>%
     slice(10000) %>%
     ungroup() %>%
+    inner_join(medians) %>%
     mutate(
       hard_threshold = {{score}},
-      dataset_id = row_number(ordering(desc(hard_threshold)))
+      dataset_id = row_number(ordering(desc(median_score)))
     ) %>%
     select(dataset, dataset_id, hard_threshold)
 
