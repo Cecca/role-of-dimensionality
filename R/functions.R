@@ -1330,14 +1330,24 @@ arrow_plot <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
+# What we want to show is the _conditional_ probability of a vector getting
+# a rank with k=10 given that it has a rank in some range with k=100
 plot_heatmap <- function(data, rank_accurate, rank_less_accurate) {
-  ggplot(data, aes({{rank_accurate}}, {{rank_less_accurate}})) + 
-    stat_bin_2d(aes(fill=ntile(stat(count), n=100)), bins=100) + 
+  binned <- data %>%
+    mutate(g_acc = cut({{rank_accurate}}, 30, right=FALSE), 
+           g_nonacc = cut({{rank_less_accurate}}, 30, right=FALSE)) %>%
+    group_by(dataset, g_acc, g_nonacc) %>%
+    summarise(cnt = n(), .groups="drop_last") %>%
+    mutate(prob = cnt / sum(cnt))
+
+  ggplot(binned, aes(x=desc(g_acc), y=desc(g_nonacc), fill=prob)) + 
+    geom_tile() +
     facet_wrap(vars(dataset), ncol=3, scales="free") + 
-    scale_fill_viridis_c() + 
-    scale_x_continuous(breaks=c(0), trans="reverse") + 
-    scale_y_continuous(breaks=c(0), trans="reverse") +
-    labs(fill="Percentile of count") +
+    scale_fill_viridis_c(option="inferno") + 
+    scale_x_discrete(breaks=c()) +
+    scale_y_discrete(breaks=c()) +
+    labs(fill="Conditional probability",
+         x="", y="") +
     theme_classic() +
     theme(strip.background = element_blank(),
           strip.text=element_text(hjust=0.05))
