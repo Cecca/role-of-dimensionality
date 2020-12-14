@@ -76,14 +76,16 @@ plan <- drake_plan(
   # ------- Data --------
   summarized = load_results("summarised.csv.bz2"),
   
-  detail = target(
-    read_parquet("detail.parquet"),
-    format="fst"
-  ),
+  # detail = target(
+  #   read_parquet("detail.parquet"),
+  #   format="fst"
+  # ),
   
-  averages = detail %>% 
-    group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
-    summarise(qps = 1/mean(query_time), recall = mean(recall)),
+  # averages = detail %>% 
+  #   group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
+  #   summarise(qps = 1/mean(query_time), recall = mean(recall)),
+  averages = summarized %>%
+    rename(recall = `k-nn`),
   
   distcomps = summarized %>% 
     select(dataset, difficulty, difficulty_type, algorithm, parameters, distcomps),
@@ -651,137 +653,137 @@ plan <- drake_plan(
   
   # ------------------ How is the difficulty? --------------------
   
-  avg_lid = target(
-    detail %>% 
-      filter(difficulty_type == "lid") %>% 
-      group_by(dataset, difficulty, algorithm, difficulty_type, parameters) %>% 
-      summarise(
-        recall = mean(recall),
-        qps = 1/mean(query_time)
-      ) %>% ungroup()
-  ),
-  avg_expansion = detail %>% 
-    filter(difficulty_type == "expansion") %>% 
-    group_by(dataset, difficulty, algorithm, difficulty_type, parameters) %>% 
-    summarise(
-      recall = mean(recall),
-      qps = 1/mean(query_time)
-    ) %>% ungroup(),
+  # avg_lid = target(
+  #   detail %>% 
+  #     filter(difficulty_type == "lid") %>% 
+  #     group_by(dataset, difficulty, algorithm, difficulty_type, parameters) %>% 
+  #     summarise(
+  #       recall = mean(recall),
+  #       qps = 1/mean(query_time)
+  #     ) %>% ungroup()
+  # ),
+  # avg_expansion = detail %>% 
+  #   filter(difficulty_type == "expansion") %>% 
+  #   group_by(dataset, difficulty, algorithm, difficulty_type, parameters) %>% 
+  #   summarise(
+  #     recall = mean(recall),
+  #     qps = 1/mean(query_time)
+  #   ) %>% ungroup(),
   
-  fast_accurate = averages %>% 
-    filter(algorithm != "bruteforce-blas") %>% 
-    filter(difficulty != "diverse") %>% 
-    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-    filter(recall >= 0.9) %>% 
-    slice(which.max(qps)) %>% 
-    ungroup() %>% 
-    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
+  # fast_accurate = averages %>% 
+  #   filter(algorithm != "bruteforce-blas") %>% 
+  #   filter(difficulty != "diverse") %>% 
+  #   group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+  #   filter(recall >= 0.9) %>% 
+  #   slice(which.max(qps)) %>% 
+  #   ungroup() %>% 
+  #   mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
   
-  moving_configurations = averages %>% 
-    semi_join(filter(fast_accurate, difficulty == "easy"), 
-              by=c("dataset", "difficulty_type", "algorithm", "parameters")) %>% 
-    ungroup() %>% 
-    filter(difficulty != "diverse") %>% 
-    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
+  # moving_configurations = averages %>% 
+  #   semi_join(filter(fast_accurate, difficulty == "easy"), 
+  #             by=c("dataset", "difficulty_type", "algorithm", "parameters")) %>% 
+  #   ungroup() %>% 
+  #   filter(difficulty != "diverse") %>% 
+  #   mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
   
-  fast_accurate_arrow_plot = fast_accurate %>% 
-    arrow_plot(),
+  # fast_accurate_arrow_plot = fast_accurate %>% 
+  #   arrow_plot(),
   
-  fast_accurate_plot_paper = {
-    tikz(here("imgs", "fast-accurate.tex"),
-         width = 5.5, height = 3)
-    print(fast_accurate_arrow_plot)
-    dev.off()
-  },
+  # fast_accurate_plot_paper = {
+  #   tikz(here("imgs", "fast-accurate.tex"),
+  #        width = 5.5, height = 3)
+  #   print(fast_accurate_arrow_plot)
+  #   dev.off()
+  # },
   
   # ----------- Recall vs. difficulty ------------
   
-  detail_to_plot = detail %>% 
-    filter(dataset == "GLOVE-2M",
-           parameters == "Annoy(n_trees=100, search_k=200000)",
-           difficulty == "diverse"
-           ),
+  # detail_to_plot = detail %>% 
+  #   filter(dataset == "GLOVE-2M",
+  #          parameters == "Annoy(n_trees=100, search_k=200000)",
+  #          difficulty == "diverse"
+  #          ),
  
-  correlation_lid = detail %>% 
-    filter(difficulty_type == "lid") %>% 
-    group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-    summarise(correlation_recall = cor(recall, lid),
-              correlation_time = cor(query_time, lid)),
-  correlation_lrc = detail %>% 
-    filter(difficulty_type == "lrc") %>% 
-    group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-    summarise(correlation_recall = cor(recall, lrc),
-              correlation_time = cor(query_time, lrc)),
-  correlation_expansion = detail %>% 
-    filter(difficulty_type == "expansion") %>% 
-    group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-    summarise(correlation_recall = cor(recall, expansion),
-              correlation_time = cor(query_time, expansion)),
-  correlation = bind_rows(correlation_lid, correlation_lrc, correlation_expansion),
-  correlation_plot_data = correlation %>% 
-    group_by(dataset, algorithm, difficulty, difficulty_type) %>% 
-    summarise(corr = mean(correlation_recall, na.rm=T)) %>% 
-    filter(difficulty=="diverse"),
+  # correlation_lid = detail %>% 
+  #   filter(difficulty_type == "lid") %>% 
+  #   group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+  #   summarise(correlation_recall = cor(recall, lid),
+  #             correlation_time = cor(query_time, lid)),
+  # correlation_lrc = detail %>% 
+  #   filter(difficulty_type == "lrc") %>% 
+  #   group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+  #   summarise(correlation_recall = cor(recall, lrc),
+  #             correlation_time = cor(query_time, lrc)),
+  # correlation_expansion = detail %>% 
+  #   filter(difficulty_type == "expansion") %>% 
+  #   group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+  #   summarise(correlation_recall = cor(recall, expansion),
+  #             correlation_time = cor(query_time, expansion)),
+  # correlation = bind_rows(correlation_lid, correlation_lrc, correlation_expansion),
+  # correlation_plot_data = correlation %>% 
+  #   group_by(dataset, algorithm, difficulty, difficulty_type) %>% 
+  #   summarise(corr = mean(correlation_recall, na.rm=T)) %>% 
+  #   filter(difficulty=="diverse"),
  
-  correlation_plot = correlation_plot_data %>% 
-    mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
-    ungroup() %>% 
-    mutate(difficulty_type = recode_factor(difficulty_type,
-                                           "lid" = "LID",
-                                           "expansion" = "Expansion",
-                                           "lrc" = "RC")) %>% 
-    ggplot(aes(dataset, algorithm, fill=corr)) +
-    geom_tile() + 
-    geom_text(aes(label=scales::number(corr,accuracy=.01),
-                  color=color),
-              size=2) + 
-    facet_wrap(vars(difficulty_type)) + 
-    scale_fill_continuous_diverging() + 
-    scale_color_identity()+
-    theme_classic() + 
-    theme(axis.text.x.bottom = element_text(angle=90)),
+  # correlation_plot = correlation_plot_data %>% 
+  #   mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
+  #   ungroup() %>% 
+  #   mutate(difficulty_type = recode_factor(difficulty_type,
+  #                                          "lid" = "LID",
+  #                                          "expansion" = "Expansion",
+  #                                          "lrc" = "RC")) %>% 
+  #   ggplot(aes(dataset, algorithm, fill=corr)) +
+  #   geom_tile() + 
+  #   geom_text(aes(label=scales::number(corr,accuracy=.01),
+  #                 color=color),
+  #             size=2) + 
+  #   facet_wrap(vars(difficulty_type)) + 
+  #   scale_fill_continuous_diverging() + 
+  #   scale_color_identity()+
+  #   theme_classic() + 
+  #   theme(axis.text.x.bottom = element_text(angle=90)),
  
-  correlation_plot_paper = {
-    ggsave(plot=correlation_plot,
-           filename = here("imgs", "correlation-plot.png"),
-           width = 16,
-           height = 8,
-           units = "cm")
-  },
+  # correlation_plot_paper = {
+  #   ggsave(plot=correlation_plot,
+  #          filename = here("imgs", "correlation-plot.png"),
+  #          width = 16,
+  #          height = 8,
+  #          units = "cm")
+  # },
  
-  recall_vs_x_plot_size = 1.7,
+  # recall_vs_x_plot_size = 1.7,
     
-  recall_vs_lid_paper_1 = {
-    tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
-         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
-    p <- detail_to_plot %>% 
-      filter(difficulty_type == "lid") %>% 
-      (function(d){print(head(d)); d}) %>% 
-      do_plot_recall_vs_lid_single()
-    print(p)
-    dev.off()
-  },
+  # recall_vs_lid_paper_1 = {
+  #   tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
+  #        width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
+  #   p <- detail_to_plot %>% 
+  #     filter(difficulty_type == "lid") %>% 
+  #     (function(d){print(head(d)); d}) %>% 
+  #     do_plot_recall_vs_lid_single()
+  #   print(p)
+  #   dev.off()
+  # },
   
-  recall_vs_expansion_paper_1 = {
-    tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
-         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
-    p <- detail_to_plot %>% 
-      filter(difficulty_type == "expansion") %>% 
-      filter(expansion <= 1.1) %>% 
-      do_plot_recall_vs_expansion_single()
-    print(p)
-    dev.off()
-  },
+  # recall_vs_expansion_paper_1 = {
+  #   tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
+  #        width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
+  #   p <- detail_to_plot %>% 
+  #     filter(difficulty_type == "expansion") %>% 
+  #     filter(expansion <= 1.1) %>% 
+  #     do_plot_recall_vs_expansion_single()
+  #   print(p)
+  #   dev.off()
+  # },
  
-  recall_vs_lrc_paper_1 = {
-    tikz(file = here("imgs", "onng-recall-vs-rc.tex"),
-         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
-    p <- detail_to_plot %>% 
-      filter(difficulty_type == "lrc") %>% 
-      do_plot_recall_vs_lrc_single()
-    print(p)
-    dev.off()
-  },
+  # recall_vs_lrc_paper_1 = {
+  #   tikz(file = here("imgs", "onng-recall-vs-rc.tex"),
+  #        width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
+  #   p <- detail_to_plot %>% 
+  #     filter(difficulty_type == "lrc") %>% 
+  #     do_plot_recall_vs_lrc_single()
+  #   print(p)
+  #   dev.off()
+  # },
   
   
 )
