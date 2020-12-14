@@ -135,22 +135,22 @@ scores_plan <- drake_plan(
   plot_lid_heatmap = {
     p <- plot_heatmap(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
     save_figure(plot=p, 
-                basename="imgs/lid_heatmap", 
-                tex_width=11.2, tex_height=2.8,
+                basename="imgs/lidHeatmap", 
+                tex_width=5, tex_height=2.8,
                 png_width=8, png_height=5)
   },
   plot_rc_heatmap = {
     p <- plot_heatmap(rc_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
     save_figure(plot=p, 
-                basename="imgs/rc_heatmap", 
-                tex_width=11.2, tex_height=2.8,
+                basename="imgs/rcHeatmap", 
+                tex_width=5, tex_height=2.8,
                 png_width=8, png_height=5)
   },
   plot_expansion_heatmap = {
     p <- plot_heatmap(expansion_displacement, rank_accurate=rank100, rank_less_accurate=rank20)
     save_figure(plot=p, 
-                basename="imgs/expansion_heatmap", 
-                tex_width=11.2, tex_height=2.8,
+                basename="imgs/expansionHeatmap", 
+                tex_width=5, tex_height=2.8,
                 png_width=8, png_height=5)
   },
 

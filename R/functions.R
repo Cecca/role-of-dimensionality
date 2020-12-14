@@ -1343,13 +1343,14 @@ plot_heatmap <- function(data, rank_accurate, rank_less_accurate) {
   ggplot(binned, aes(x=desc(g_acc), y=desc(g_nonacc), fill=prob)) + 
     geom_tile() +
     facet_wrap(vars(dataset), ncol=3, scales="free") + 
-    scale_fill_viridis_c(option="inferno") + 
+    scale_fill_viridis_c(option="inferno", trans=scales::exp_trans(10)) + 
     scale_x_discrete(breaks=c()) +
     scale_y_discrete(breaks=c()) +
     labs(fill="Conditional probability",
          x="", y="") +
     theme_classic() +
-    theme(strip.background = element_blank(),
+    theme(legend.position="top",
+          strip.background = element_blank(),
           strip.text=element_text(hjust=0.05))
 }
 
@@ -1503,7 +1504,7 @@ plot_score_distribution <- function(distribution, score, param, param_low, param
 
 save_figure <- function(plot, basename, tex_width, tex_height, png_width, png_height) {
   tikz(paste0(basename, ".tex"),
-       width = tex_height, height = tex_height)
+       width = tex_width, height = tex_height)
   print(plot)
   dev.off()
 
