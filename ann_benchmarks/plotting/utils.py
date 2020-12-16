@@ -6,6 +6,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 import os, itertools, json, numpy, pickle
 from ann_benchmarks.plotting.metrics import all_metrics as metrics
+from ann_benchmarks.plotting.metrics import compute_knn, compute_rel
 import matplotlib.pyplot as plt
 import re
 from scipy.spatial.distance import cdist
@@ -283,6 +284,77 @@ def runs_to_dataframe(true_nn_distances, res, recompute=False):
         return pd.concat(dfs)
     else:
         return None
+
+
+def runs_to_sqlite(dataset, res, conn):
+    for (properties, run) in res:
+        print(".", end="")
+        run_to_sqlite(dataset, run, properties, conn)
+    print()
+
+
+def run_to_sqlite(data, run, properties, conn):
+    true_nn_distances = data['distances']
+    k = len(run['distances'][0])
+    algo = properties["algo"]
+    algo_name = properties["name"]
+    dataset = properties['dataset']
+    # cache to avoid access to hdf5 file
+    run_distances = numpy.array(run["distances"])
+    query_times = numpy.array(run['times'])
+
+    recall = compute_knn(true_nn_distances, run_distances, k) / k
+    rel = compute_rel(true_nn_distances, run_distances)
+
+    avg_recall = float(np.mean(recall))
+    avg_rel = float(np.mean(rel))
+    qps = float(1/np.mean(query_times))
+
+    # Data frame to store the query stats data
+    df = pd.DataFrame({
+        'recall': recall,
+        'query_time': query_times,
+        'rel': rel
+    })
+    if 'expansion' in dataset:
+        difficulty_type = 'expansion'
+    elif 'lrc' in dataset:
+        difficulty_type = "lrc"
+    else:
+        difficulty_type = "lid"
+
+    difficulty = re.findall("hard|middle|easy|diverse", dataset)[0]
+    distance_type = re.findall("angular|euclidean", dataset)[0]
+    dimensionality_measures = get_dimensionality_measures(
+        data, distance_type)
+
+    dataset = re.sub("-(hard|middle|easy|diverse)", "", dataset)
+    dataset = re.sub("-(expansion|lrc|lid)", "", dataset)
+
+    df['lrc'] = dimensionality_measures['lrc']
+    df['lid'] = dimensionality_measures['lid']
+    df['expansion'] = dimensionality_measures['expansion']
+
+    dataset = dataset_map[dataset]
+    algorithm = algo_map[algo]
+    parameters = algo_name
+    difficulty_type = difficulty_type
+    difficulty = difficulty
+    distcomps = int(metrics['distcomps']['function'](true_nn_distances, run_distances, query_times, None, run.attrs))
+
+    # Do the insertion in the two tables in a transaction
+    with conn:
+        # Null is for the auto increment key
+        # TODO: add the averaged values of the metrics
+        cursor = conn.execute(
+            "INSERT INTO main VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (dataset, algorithm, parameters, difficulty_type, difficulty, qps, avg_recall, avg_rel, distcomps))
+        idx = cursor.lastrowid
+
+        df['id'] = idx
+        df.to_sql('query_stats', conn, if_exists='append', index=False)
+
+    return df
 
 
 def compute_all_metrics(true_nn_distances, run, properties, recompute=False):
