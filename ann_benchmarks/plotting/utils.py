@@ -225,67 +225,6 @@ def compute_metrics_all_runs(dataset, res, recompute=False):
         yield run_result
 
 
-def run_to_dataframe(data, run, properties, recompute=False):
-    true_nn_distances = data['distances']
-    k = len(run['distances'][0])
-    algo = properties["algo"]
-    algo_name = properties["name"]
-    dataset = properties['dataset']
-    # cache to avoid access to hdf5 file
-    run_distances = numpy.array(run["distances"])
-    query_times = numpy.array(run['times'])
-    if recompute and 'metrics' in run:
-        print('deleting cached metrics')
-        del run['metrics']
-    metrics_cache = get_or_create_metrics(run)
-    # cache the knn recall (if needed)
-    metrics['k-nn']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
-    recalls = metrics_cache['knn']['recalls']
-    df = pd.DataFrame({
-        'recall': numpy.array(recalls) / k,
-        'query_time': query_times,
-    })
-    if 'expansion' in dataset:
-        difficulty_type = 'expansion'
-    elif 'lrc' in dataset:
-        difficulty_type = "lrc"
-    else:
-        difficulty_type = "lid"
-
-    difficulty = re.findall("hard|middle|easy|diverse", dataset)[0]
-    distance_type = re.findall("angular|euclidean", dataset)[0]
-    dimensionality_measures = get_dimensionality_measures(
-        data, distance_type)
-
-    dataset = re.sub("-(hard|middle|easy|diverse)", "", dataset)
-    dataset = re.sub("-(expansion|lrc|lid)", "", dataset)
-
-    df['queries_per_second'] = 1.0/df['query_time']
-    df['lrc'] = dimensionality_measures['lrc']
-    df['lid'] = dimensionality_measures['lid']
-    df['expansion'] = dimensionality_measures['expansion']
-    df['dataset'] = dataset_map[dataset]
-    df['dataset'] = df['dataset'].astype(dataset_cat)
-    df['algorithm'] = algo_map[algo]
-    df['algorithm'] = df['algorithm'].astype(algo_cat)
-    df['parameters'] = algo_name
-    df['difficulty_type'] = difficulty_type
-    df['difficulty_type'] = df['difficulty_type'].astype(difficulty_type_cat)
-    df['difficulty'] = difficulty
-    df['difficulty'] = df['difficulty'].astype(difficulty_cat)
-    return df
-
-
-def runs_to_dataframe(true_nn_distances, res, recompute=False):
-    dfs = []
-    for i, (properties, run) in enumerate(res):
-        dfs.append(run_to_dataframe(true_nn_distances, run, properties, recompute))
-    if len(dfs) > 0:
-        return pd.concat(dfs)
-    else:
-        return None
-
-
 def runs_to_sqlite(dataset, res, conn):
     for (properties, run) in res:
         print(".", end="")
