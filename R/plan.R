@@ -147,7 +147,30 @@ plan <- drake_plan(
            difficulty_type == "lid",
            difficulty != "diverse") %>% 
     do_plot_distcomps_vs_qps(),
+
+  plot_recall_vs_rel_paper = averages_recoded %>%
+    filter(difficulty_type == "lid") %>%
+    ggplot(aes(recall, rel, color=difficulty)) +
+    geom_point(size=.5) +
+    facet_wrap(vars(algorithm), scales="free", ncol=5) +
+    scale_y_continuous(trans="identity") +
+    scale_x_continuous(breaks=c(0.5,1)) + 
+    theme_bw()  +
+    theme(#legend.position = c(0.83, 0.2),
+          legend.position = "top",
+          legend.direction = "horizontal",
+          legend.box = "vertical",
+          text = element_text(size = 8),
+          plot.margin = unit(c(0,0,0,0), "cm"))
+  ,
     
+  figure_recall_vs_rel_paper = {
+    tikz(file = here("imgs", "recall-vs-rel.tex"),
+         width = 5.5, height = 2)
+    print(plot_recall_vs_rel_paper)
+    dev.off()
+  },
+
   figure_recall_vs_qps_lid_paper = {
     tikz(file = here("imgs", "recall-vs-qps-lid.tex"),
          width = 5.5, height = 3)
