@@ -41,11 +41,8 @@
 #     stop("Missing RC file")
 #   }
 # }
-if (!file.exists("detail.parquet")) {
-  stop("Missing detail.parquet file")
-}
-if (!file.exists(here("summarised.csv.bz2"))) {
-  stop("Missing summarised.csv.bz2 file")
+if (!file.exists("export.db")) {
+  stop("Missing export.db file")
 }
 
 datasets <- list(
@@ -72,9 +69,22 @@ algorithms <- list(
   "Annoy"
 )
 
+conn <- DBI::dbConnect(RSQLite::SQLite(), "export.db")
+
+detail <- function() {
+  inner_join(
+    tbl(conn, "main"),
+    tbl(conn, "query_stats"),
+    by="id"
+  )
+}
+
 plan <- drake_plan(
   # ------- Data --------
-  summarized = load_results("summarised.csv.bz2"),
+  # summarized = load_results("summarised.csv.bz2"),
+  summarized = tbl(conn, "main") %>% 
+    collect() %>%
+    rename(recall = avg_recall, rel = avg_rel),
   
   # detail = target(
   #   read_parquet("detail.parquet"),
@@ -84,8 +94,7 @@ plan <- drake_plan(
   # averages = detail %>% 
   #   group_by(dataset, difficulty, difficulty_type, algorithm, parameters) %>% 
   #   summarise(qps = 1/mean(query_time), recall = mean(recall)),
-  averages = summarized %>%
-    rename(recall = `k-nn`),
+  averages = summarized,
   
   distcomps = summarized %>% 
     select(dataset, difficulty, difficulty_type, algorithm, parameters, distcomps),
@@ -584,13 +593,14 @@ plan <- drake_plan(
   
   # ------- Performance distribution scores ------------
   
+  # TODO: this would be better replaced with a plot built with React/D3
   # plot_distribution = target({
-  #   plot_data <- detail %>%
+  #   plot_data <- detail() %>%
   #     filter(algorithm == algorithm_name,
   #            dataset == dataset_name,
   #            difficulty == difficulty_name,
   #            difficulty_type == difficulty_type_name) %>% 
-  #     mutate(recall = recall / 10)
+  #     collect()
   #   interactive_distribution_plot(plot_data)
   #   },
   #   transform = cross(
@@ -600,7 +610,7 @@ plan <- drake_plan(
   #     difficulty_type_name = c("expansion", "lid")
   #   )
   # ),
-  
+  #
   # figure_distribution = target(
   #   htmlwidgets::saveWidget(plot_distribution,
   #                           here("imgs", str_c("perf-distribution-",
@@ -612,27 +622,28 @@ plan <- drake_plan(
   #   transform = map(plot_distribution)
   # ),
   
-  # data_performance_distribution_paper = detail %>% 
-  #   filter(dataset == "GLOVE-2M",
-  #          difficulty %in% c("middle", "diverse"),
-  #          difficulty_type == "lid"),
+  data_performance_distribution_paper = detail() %>% 
+    filter(dataset == "GLOVE-2M",
+           difficulty %in% c("middle", "diverse"),
+           difficulty_type == "lid") %>%
+    collect(),
   
-  # plot_performance_distribution_recall = {
-  #   p <- data_performance_distribution_paper %>%
-  #     filter(algorithm %in% algorithms) %>% 
-  #     static_ridges_plot_recall()
-  #   ggsave("imgs/distribution_recall.pdf", plot=p,
-  #          width = 8, height=4)
-  # },
+  plot_performance_distribution_recall = {
+    p <- data_performance_distribution_paper %>%
+      filter(algorithm %in% algorithms) %>% 
+      static_ridges_plot_recall()
+    ggsave("imgs/distribution_recall.pdf", plot=p,
+           width = 8, height=4)
+  },
   
-  # plot_performance_distribution_qps = data_performance_distribution_paper %>% 
-  #     filter(algorithm %in% algorithms) %>% 
-  #     static_ridges_plot_qps(),
+  plot_performance_distribution_qps = data_performance_distribution_paper %>% 
+      filter(algorithm %in% algorithms) %>% 
+      static_ridges_plot_qps(),
   
-  # figure_performance_distribution_qps = {
-  #   ggsave("imgs/distribution_qps.pdf", plot=plot_performance_distribution_qps,
-  #          width = 8, height=4)
-  # },
+  figure_performance_distribution_qps = {
+    ggsave("imgs/distribution_qps.pdf", plot=plot_performance_distribution_qps,
+           width = 8, height=4)
+  },
   
   # ------------------ Ranking ------------------------
   plot_ranking_qps = averages %>% 
@@ -676,6 +687,7 @@ plan <- drake_plan(
   
   # ------------------ How is the difficulty? --------------------
   
+  # TODO remove
   # avg_lid = target(
   #   detail %>% 
   #     filter(difficulty_type == "lid") %>% 
@@ -693,52 +705,67 @@ plan <- drake_plan(
   #     qps = 1/mean(query_time)
   #   ) %>% ungroup(),
   
-  # fast_accurate = averages %>% 
-  #   filter(algorithm != "bruteforce-blas") %>% 
-  #   filter(difficulty != "diverse") %>% 
-  #   group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-  #   filter(recall >= 0.9) %>% 
-  #   slice(which.max(qps)) %>% 
-  #   ungroup() %>% 
-  #   mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
+  fast_accurate = averages %>% 
+    filter(algorithm != "bruteforce-blas") %>% 
+    filter(difficulty != "diverse") %>% 
+    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
+    filter(recall >= 0.9) %>% 
+    slice(which.max(qps)) %>% 
+    ungroup() %>% 
+    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
   
-  # moving_configurations = averages %>% 
-  #   semi_join(filter(fast_accurate, difficulty == "easy"), 
-  #             by=c("dataset", "difficulty_type", "algorithm", "parameters")) %>% 
-  #   ungroup() %>% 
-  #   filter(difficulty != "diverse") %>% 
-  #   mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
+  moving_configurations = averages %>% 
+    semi_join(filter(fast_accurate, difficulty == "easy"), 
+              by=c("dataset", "difficulty_type", "algorithm", "parameters")) %>% 
+    ungroup() %>% 
+    filter(difficulty != "diverse") %>% 
+    mutate(difficulty = factor(difficulty, levels=c("easy", "middle", "hard"), ordered = T)),
   
-  # fast_accurate_arrow_plot = fast_accurate %>% 
-  #   arrow_plot(),
+  fast_accurate_arrow_plot = fast_accurate %>% 
+    arrow_plot(),
   
-  # fast_accurate_plot_paper = {
-  #   tikz(here("imgs", "fast-accurate.tex"),
-  #        width = 5.5, height = 3)
-  #   print(fast_accurate_arrow_plot)
-  #   dev.off()
-  # },
+  fast_accurate_plot_paper = {
+    tikz(here("imgs", "fast-accurate.tex"),
+         width = 5.5, height = 3)
+    print(fast_accurate_arrow_plot)
+    dev.off()
+  },
   
   # ----------- Recall vs. difficulty ------------
   
-  # detail_to_plot = detail %>% 
-  #   filter(dataset == "GLOVE-2M",
-  #          parameters == "Annoy(n_trees=100, search_k=200000)",
-  #          difficulty == "diverse"
-  #          ),
- 
-  # correlation_lid = detail %>% 
+  correlation_plot_data = bind_rows(
+    # LID
+    detail() %>%
+      filter(difficulty=="diverse", difficulty_type == "lid") %>% 
+      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+      sqlite_cor(recall, lid),
+    detail() %>%
+      filter(difficulty=="diverse", difficulty_type == "lrc") %>% 
+      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+      sqlite_cor(recall, lrc),
+    detail() %>%
+      filter(difficulty=="diverse", difficulty_type == "expansion") %>% 
+      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+      sqlite_cor(recall, expansion)
+  ) %>%
+  group_by(dataset, algorithm, difficulty_type) %>% 
+  summarise(corr = mean(corr, na.rm=T)),
+
+  # correlation_lid = detail() %>% 
   #   filter(difficulty_type == "lid") %>% 
+  #   collect() %>%
   #   group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
   #   summarise(correlation_recall = cor(recall, lid),
   #             correlation_time = cor(query_time, lid)),
-  # correlation_lrc = detail %>% 
+  # correlation_lrc = detail() %>% 
   #   filter(difficulty_type == "lrc") %>% 
+  #   collect() %>%
   #   group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
   #   summarise(correlation_recall = cor(recall, lrc),
   #             correlation_time = cor(query_time, lrc)),
-  # correlation_expansion = detail %>% 
+  # correlation_expansion = detail() %>% 
   #   filter(difficulty_type == "expansion") %>% 
+  #   collect() %>%
   #   group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
   #   summarise(correlation_recall = cor(recall, expansion),
   #             correlation_time = cor(query_time, expansion)),
@@ -748,65 +775,75 @@ plan <- drake_plan(
   #   summarise(corr = mean(correlation_recall, na.rm=T)) %>% 
   #   filter(difficulty=="diverse"),
  
-  # correlation_plot = correlation_plot_data %>% 
-  #   mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
-  #   ungroup() %>% 
-  #   mutate(difficulty_type = recode_factor(difficulty_type,
-  #                                          "lid" = "LID",
-  #                                          "expansion" = "Expansion",
-  #                                          "lrc" = "RC")) %>% 
-  #   ggplot(aes(dataset, algorithm, fill=corr)) +
-  #   geom_tile() + 
-  #   geom_text(aes(label=scales::number(corr,accuracy=.01),
-  #                 color=color),
-  #             size=2) + 
-  #   facet_wrap(vars(difficulty_type)) + 
-  #   scale_fill_continuous_diverging() + 
-  #   scale_color_identity()+
-  #   theme_classic() + 
-  #   theme(axis.text.x.bottom = element_text(angle=90)),
+  correlation_plot = correlation_plot_data %>% 
+    mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
+    ungroup() %>% 
+    mutate(difficulty_type = recode_factor(difficulty_type,
+                                           "lid" = "LID",
+                                           "expansion" = "Expansion",
+                                           "lrc" = "RC")) %>% 
+    ggplot(aes(dataset, algorithm, fill=corr)) +
+    geom_tile() + 
+    geom_text(aes(label=scales::number(corr,accuracy=.01),
+                  color=color),
+              size=2) + 
+    facet_wrap(vars(difficulty_type)) + 
+    scale_fill_continuous_diverging() + 
+    scale_color_identity()+
+    theme_classic() + 
+    theme(axis.text.x.bottom = element_text(angle=90)),
  
-  # correlation_plot_paper = {
-  #   ggsave(plot=correlation_plot,
-  #          filename = here("imgs", "correlation-plot.png"),
-  #          width = 16,
-  #          height = 8,
-  #          units = "cm")
-  # },
+  correlation_plot_paper = {
+    ggsave(plot=correlation_plot,
+           filename = here("imgs", "correlation-plot.png"),
+           width = 16,
+           height = 8,
+           units = "cm")
+  },
  
-  # recall_vs_x_plot_size = 1.7,
+  # TODO: use the log of lid and expansion
+  recall_vs_x_plot_size = 1.7,
+  detail_to_plot = detail() %>% 
+    filter(dataset == "GLOVE-2M",
+           parameters == "Annoy(n_trees=100, search_k=200000)",
+           difficulty == "diverse"
+           ) %>%
+    collect(),
+
     
-  # recall_vs_lid_paper_1 = {
-  #   tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
-  #        width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
-  #   p <- detail_to_plot %>% 
-  #     filter(difficulty_type == "lid") %>% 
-  #     (function(d){print(head(d)); d}) %>% 
-  #     do_plot_recall_vs_lid_single()
-  #   print(p)
-  #   dev.off()
-  # },
+  recall_vs_lid_paper_1 = {
+    tikz(file = here("imgs", "onng-recall-vs-lid.tex"),
+         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
+    p <- detail_to_plot %>% 
+      filter(difficulty_type == "lid") %>% 
+      # (function(d){print(head(d)); d}) %>% 
+      do_plot_recall_vs_lid_single()
+    print(p)
+    dev.off()
+  },
   
-  # recall_vs_expansion_paper_1 = {
-  #   tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
-  #        width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
-  #   p <- detail_to_plot %>% 
-  #     filter(difficulty_type == "expansion") %>% 
-  #     filter(expansion <= 1.1) %>% 
-  #     do_plot_recall_vs_expansion_single()
-  #   print(p)
-  #   dev.off()
-  # },
+  recall_vs_expansion_paper_1 = {
+    tikz(file = here("imgs", "onng-recall-vs-expansion.tex"),
+         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
+    p <- detail_to_plot %>% 
+      filter(difficulty_type == "expansion") %>% 
+      # filter(expansion <= 1.1) %>% 
+      mutate(expansion = 1/log(expansion)) %>%
+      do_plot_recall_vs_expansion_single()
+    print(p)
+    dev.off()
+  },
  
-  # recall_vs_lrc_paper_1 = {
-  #   tikz(file = here("imgs", "onng-recall-vs-rc.tex"),
-  #        width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
-  #   p <- detail_to_plot %>% 
-  #     filter(difficulty_type == "lrc") %>% 
-  #     do_plot_recall_vs_lrc_single()
-  #   print(p)
-  #   dev.off()
-  # },
+  recall_vs_lrc_paper_1 = {
+    tikz(file = here("imgs", "onng-recall-vs-rc.tex"),
+         width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
+    p <- detail_to_plot %>% 
+      filter(difficulty_type == "lrc") %>% 
+      mutate(lrc = 1/log(lrc)) %>%
+      do_plot_recall_vs_lrc_single()
+    print(p)
+    dev.off()
+  },
   
   
 )

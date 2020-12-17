@@ -498,7 +498,7 @@ static_ridges_plot_recall <- function(algo_data) {
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
     psel(high(qps) * high(avg_recall))
   
-  all_points <- inner_join(algo_data, averages)
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
   
   ggplot(all_points, aes(x=recall, y=qps, group=parameters)) +
     geom_density_ridges(alpha=0.4, scale=15,
@@ -525,7 +525,7 @@ static_ridges_plot_qps <- function(algo_data) {
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
     psel(high(qps) * high(avg_recall))
   
-  all_points <- inner_join(algo_data, averages)
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
   print(count(all_points, algorithm, difficulty, avg_recall) %>% 
           filter(algorithm == "IVF") %>% 
           arrange(desc(avg_recall)))
@@ -936,7 +936,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
                        limits = expansion_range) +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    #labs(caption=params) +
+    labs(x="1/log(expansion)") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -967,7 +967,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
 }
 
 do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
-  detail_with_difficulty <- filter(detail_with_difficulty, lrc <= 5)
+  # detail_with_difficulty <- filter(detail_with_difficulty, lrc <= 5)
   params <- detail_with_difficulty %>% distinct(parameters) %>% pull()
   bw <- detail_with_difficulty %>% select(lrc) %>% max() / 20.0
   lrc_range <- detail_with_difficulty %>% select(lrc) %>% range()
@@ -981,7 +981,7 @@ do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
     scale_size_area() +
     #scale_x_log10() +
     coord_cartesian(ylim = c(0,1)) +
-    #labs(caption=params) +
+    labs(x="1/log(lrc)") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1024,7 +1024,6 @@ do_plot_recall_vs_lid_single <- function(detail_with_difficulty) {
     scale_fill_gradient(low='white', high='black') +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    #labs(caption=params) +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1512,4 +1511,23 @@ save_figure <- function(plot, basename, tex_width, tex_height, png_width, png_he
          width=png_width, height=png_height, dpi=300)
 }
 
-  
+# Compute the Pearson correlation between the two given columns without loading
+# into a dataframe all the data, letting the database handle most of the operations
+sqlite_cor <- function(data, X, Y) {
+  data %>%
+    mutate(
+      diffX = {{X}} - mean({{X}}, na.rm=T),
+      diffY = {{Y}} - mean({{Y}}, na.rm=T)
+    ) %>%
+    summarise(
+      mX = mean({{X}}, na.rm=T),
+      mX2 = mean({{X}} * {{X}}, na.rm=T),
+      mY = mean({{Y}}, na.rm=T),
+      mY2 = mean({{Y}} * {{Y}}, na.rm=T),
+      mDiffXY = mean(diffX*diffY, na.rm=T)
+    ) %>%
+    collect() %>%
+    transmute(
+      corr = mDiffXY / (sqrt(mX2 - mX^2) * sqrt(mY2 - mY^2))
+    )
+}
