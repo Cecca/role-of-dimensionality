@@ -176,5 +176,37 @@ scores_plan <- drake_plan(
                 png_width=5, png_height=3)
   },
 
+  # ------ Scores correlation --------
+  data_scores_paper = inner_join(
+    lid_scores %>% filter(dataset == "GLOVE", k==100) %>% select(dataset, id, lid),
+    rc_scores %>% filter(dataset == "GLOVE", k==100) %>% select(dataset, id, logrc)
+  ) %>%
+  inner_join(
+    expansion_scores %>% filter(dataset == "GLOVE", k=="10/20") %>% select(dataset, id, logexp)
+  ) %>%
+  sample_n(10000),
+
+  plot_scores_lid_exp = {
+    p <- do_scatter_distribution(data_scores_paper, lid, logexp, "LID", "1/log(Exp)")
+    ggsave(filename = here("imgs","GLOVE-scores-lid-exp.png"),
+           plot = p,
+           width=8, height=8,
+           units = "cm")
+  },
+  plot_scores_lid_rc = {
+    p <- do_scatter_distribution(data_scores_paper, lid, logrc, "LID", "1/log(RC)")
+    ggsave(filename = here("imgs","GLOVE-scores-lid-lrc.png"),
+           plot = p,
+           width=8, height=8,
+           units = "cm")
+  },
+  plot_scores_rc_exp = {
+    p <- do_scatter_distribution(data_scores_paper, logrc, logexp, "1/log(RC)", "1/log(Exp)")
+    ggsave(filename = here("imgs","GLOVE-scores-lrc-exp.png"),
+           plot = p,
+           width=8, height=8,
+           units = "cm")
+  },
+
 )
 

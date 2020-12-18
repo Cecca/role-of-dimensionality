@@ -430,6 +430,23 @@ do_plot_distcomps_vs_qps <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
+do_scatter_distribution <- function(data, x, y, labx, laby) {
+  dataset <- data %>% head(1) %>% select(dataset) %>% pull()
+  
+  scatter <- data %>% 
+    ggplot(aes(x={{x}}, y={{y}})) +
+    scale_x_continuous(#trans="log",
+                       labels=scales::number_format()) +
+    scale_y_continuous(#trans=log_trans(1.01),
+                       labels=scales::number_format(accuracy=0.01))+
+                       #breaks=c(1,2,3,4,5,6,7)) +
+    geom_point(alpha=0.1) +
+    labs(x=labx,
+         y=laby) +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  scatter
+}
 
 do_scatter_distribution_lid_exp <- function(data) {
   dataset <- data %>% head(1) %>% select(dataset) %>% pull()
