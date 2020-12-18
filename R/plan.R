@@ -734,7 +734,6 @@ plan <- drake_plan(
   # ----------- Recall vs. difficulty ------------
   
   correlation_plot_data = bind_rows(
-    # LID
     detail() %>%
       filter(difficulty=="diverse", difficulty_type == "lid") %>% 
       group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
@@ -742,10 +741,12 @@ plan <- drake_plan(
     detail() %>%
       filter(difficulty=="diverse", difficulty_type == "lrc") %>% 
       group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+      mutate(lrc = 1/log(lrc)) %>%
       sqlite_cor(recall, lrc),
     detail() %>%
       filter(difficulty=="diverse", difficulty_type == "expansion") %>% 
       group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+      mutate(expansion = 1/log(expansion)) %>%
       sqlite_cor(recall, expansion)
   ) %>%
   group_by(dataset, algorithm, difficulty_type) %>% 
@@ -780,8 +781,8 @@ plan <- drake_plan(
     ungroup() %>% 
     mutate(difficulty_type = recode_factor(difficulty_type,
                                            "lid" = "LID",
-                                           "expansion" = "Expansion",
-                                           "lrc" = "RC")) %>% 
+                                           "expansion" = "1/log(Expansion)",
+                                           "lrc" = "1/log(RC)")) %>% 
     ggplot(aes(dataset, algorithm, fill=corr)) +
     geom_tile() + 
     geom_text(aes(label=scales::number(corr,accuracy=.01),
