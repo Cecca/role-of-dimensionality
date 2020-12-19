@@ -154,6 +154,28 @@ scores_plan <- drake_plan(
                 png_width=8, png_height=5)
   },
 
+  plot_lid_ridges = {
+    p <- plot_displacement_ridges(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
+    save_figure(plot=p, 
+                basename="imgs/lidRidges", 
+                tex_width=5, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+  plot_rc_ridges = {
+    p <- plot_displacement_ridges(rc_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
+    save_figure(plot=p, 
+                basename="imgs/rcRidges", 
+                tex_width=5, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+  plot_expansion_ridges = {
+    p <- plot_displacement_ridges(expansion_displacement, rank_accurate=rank100, rank_less_accurate=rank20)
+    save_figure(plot=p, 
+                basename="imgs/expansionRidges", 
+                tex_width=5, tex_height=2.8,
+                png_width=8, png_height=5)
+  },
+
   plot_lid_distribution = {
     p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
     save_figure(plot=p, 

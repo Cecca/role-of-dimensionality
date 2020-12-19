@@ -802,7 +802,6 @@ plan <- drake_plan(
            units = "cm")
   },
  
-  # TODO: use the log of lid and expansion
   recall_vs_x_plot_size = 1.7,
   detail_to_plot = detail() %>% 
     filter(dataset == "GLOVE-2M",

@@ -1346,20 +1346,53 @@ arrow_plot <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
+plot_displacement_ridges <- function(data, rank_accurate, rank_less_accurate) {
+  binned <- data %>%
+    ungroup() %>%
+    group_by(dataset) %>%
+    mutate(g_acc = cut({{rank_accurate}}, 30, right=FALSE, labels=FALSE, ordered_result=TRUE))
+  
+  ggplot(binned, aes(x={{rank_less_accurate}}, 
+                     y=g_acc,
+                     #fill = 0.5 - abs(0.5 - stat(ecdf)),
+                     group=factor(g_acc))) +
+    stat_density_ridges(scale=20, rel_min_height=0.01,
+                        geom = "density_ridges_gradient", 
+                        calc_ecdf = FALSE) +
+    scale_x_continuous(trans="reverse",
+                       breaks=c(0),
+                       labels=c("high\nrank")) +
+    scale_y_continuous(trans="reverse",
+                       breaks=c(0),
+                       labels=c("high\nrank")) +
+    facet_wrap(vars(dataset), scales="free") +
+    labs(x="", y="") +
+    scale_fill_viridis_c(name = "Tail probability", direction = 1)
+}
+
 # What we want to show is the _conditional_ probability of a vector getting
 # a rank with k=10 given that it has a rank in some range with k=100
 plot_heatmap <- function(data, rank_accurate, rank_less_accurate) {
   binned <- data %>%
-    mutate(g_acc = cut({{rank_accurate}}, 30, right=FALSE), 
-           g_nonacc = cut({{rank_less_accurate}}, 30, right=FALSE)) %>%
+    mutate(g_acc = cut({{rank_accurate}}, 50, right=FALSE, labels=FALSE), 
+           g_nonacc = cut({{rank_less_accurate}}, 50, right=FALSE, labels=FALSE)) %>%
     group_by(dataset, g_acc, g_nonacc) %>%
     summarise(cnt = n(), .groups="drop_last") %>%
-    mutate(prob = cnt / sum(cnt))
+    mutate(
+      prob = cnt / sum(cnt),
+      binned_prob = cut(prob, 
+                        breaks=c(-0.1, 0.05, 0.1, 0.2, 0.5, 0.8, 1.1),
+                        labels=c("<0.05", "0.05 to 0.1", "0.1 to 0.2", "0.2 to 0.5", "0.5 to 0.8", ">0.8"),
+                        ordered_result=TRUE)
+    ) %>%
+    ungroup()
 
-  ggplot(binned, aes(x=desc(g_acc), y=desc(g_nonacc), fill=prob)) + 
+  print(binned %>% filter(prob > 0.2) %>% group_by(ntile(prob, 6)) %>% summarise(max(prob)))
+
+  ggplot(binned, aes(x=desc(g_acc), y=desc(g_nonacc), fill=ntile(prob, 100), group=(g_acc))) + 
     geom_tile() +
     facet_wrap(vars(dataset), ncol=3, scales="free") + 
-    scale_fill_viridis_c(option="inferno", trans=scales::exp_trans(10)) + 
+    scale_fill_viridis_c(option="inferno") + 
     scale_x_discrete(breaks=c()) +
     scale_y_discrete(breaks=c()) +
     labs(fill="Conditional probability",
