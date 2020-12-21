@@ -1,3 +1,4 @@
+import sqlite3
 import pandas as pd
 import sys
 import os
@@ -12,7 +13,7 @@ import pyarrow.parquet as pq
 from ann_benchmarks.datasets import get_dataset
 from ann_benchmarks.algorithms.definitions import get_definitions
 from ann_benchmarks.plotting.metrics import all_metrics as metrics
-from ann_benchmarks.plotting.utils  import get_plot_label, compute_metrics_all_runs, compute_metrics, create_linestyles, create_pointset, runs_to_dataframe
+from ann_benchmarks.plotting.utils  import get_plot_label, compute_metrics_all_runs, compute_metrics, create_linestyles, create_pointset, runs_to_sqlite
 from ann_benchmarks.results import store_results, load_all_results, get_unique_algorithms, get_algorithm_name
 
 datasets = [
@@ -126,37 +127,33 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     count = int(args.count)
-    dfs = []
 
-    is_first = True
-    pqwriter = None
+    dbconn = sqlite3.Connection(args.output)
+    dbconn.execute(
+        """CREATE TABLE IF NOT EXISTS main (
+            id INTEGER PRIMARY KEY, 
+            dataset TEXT NOT NULL, 
+            algorithm TEXT NOT NULL, 
+            parameters TEXT NOT NULL, 
+            difficulty_type TEXT NOT NULL, 
+            difficulty TEXT NOT NULL,
+            qps REAL NOT NULL,
+            avg_recall REAL NOT NULL,
+            avg_rel REAL NOT NULL,
+            distcomps INTEGER NOT NULL
+        )
+        """)
+    dbconn.execute(
+        "CREATE TABLE IF NOT EXISTS query_stats (id INTEGER NOT NULL, recall REAL NOT NULL, query_time REAL NOT NULL, rel REAL NOT NULL, lrc REAL NOT NULL, lid REAL NOT NULL, expansion REAL NOT NULL, FOREIGN KEY(id) REFERENCES main(id))"
+    )
+
     for dataset_name in datasets:
         print("Looking at dataset", dataset_name)
         dataset = get_dataset(dataset_name)
         unique_algorithms = get_unique_algorithms()
         results = load_all_results(dataset_name, count, True, args.batch)
-        if args.detail:
-            # df = runs_to_dataframe(list(dataset["distances"]), results, args.recompute)
-            df = runs_to_dataframe(dataset, results, args.recompute)
-            if df is not None:
-                table = pa.Table.from_pandas(df)
-                if is_first:
-                    pqwriter = pq.ParquetWriter(args.output, table.schema)
-                    is_first = False
-                pqwriter.write_table(table)
-            else:
-                print("WARNING: problems getting results for", dataset_name)
-            ## Directly write the data frame, appending to the file
-            #df.to_csv(args.output, mode="w" if is_first else "a",
-            #          header=is_first, index=False
-            #          #, compression='bz2'
-            #          )
-        else:
-            results = compute_metrics_all_runs(dataset, results, args.recompute)
-            dfs.append(pd.DataFrame(results))
-    if len(dfs) > 0:
-        data = pd.concat(dfs)
-        data.to_csv(args.output, index=False, compression='bz2')
-    if pqwriter is not None:
-        pqwriter.close()
+
+        runs_to_sqlite(dataset, results, dbconn)
+
+    print("DONE!")
 
