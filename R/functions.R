@@ -1495,7 +1495,7 @@ plot_score_distribution <- function(distribution, score, param, param_low, param
     ungroup()
 
   datasets <- distribution %>%
-    filter({{param}} == param_low) %>%
+    filter({{param}} == param_high) %>%
     arrange(dataset, ordering({{score}})) %>%
     group_by(dataset) %>%
     slice(10000) %>%

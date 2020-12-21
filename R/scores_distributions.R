@@ -180,21 +180,21 @@ scores_plan <- drake_plan(
     p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
     save_figure(plot=p, 
                 basename="imgs/density-lid", 
-                tex_width=2.8, tex_height=2.8,
+                tex_width=2.8, tex_height=2.5,
                 png_width=5, png_height=3)
   },  
   plot_rc_distribution = {
     p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=FALSE)
     save_figure(plot=p, 
                 basename="imgs/density-rc", 
-                tex_width=2.8, tex_height=2.8,
+                tex_width=2.8, tex_height=2.5,
                 png_width=5, png_height=3)
   },  
   plot_exp_distribution = {
     p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/20", param_low="5/100", xlab="1/log(Expansion)", xmax=200)
     save_figure(plot=p, 
                 basename="imgs/density-expansion", 
-                tex_width=2.8, tex_height=2.8,
+                tex_width=2.8, tex_height=2.5,
                 png_width=5, png_height=3)
   },
 
