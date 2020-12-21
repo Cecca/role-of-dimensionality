@@ -435,11 +435,12 @@ do_scatter_distribution <- function(data, x, y, labx, laby) {
   
   scatter <- data %>% 
     ggplot(aes(x={{x}}, y={{y}})) +
-    scale_x_continuous(#trans="log",
-                       labels=scales::number_format()) +
-    scale_y_continuous(#trans=log_trans(1.01),
-                       labels=scales::number_format(accuracy=0.01))+
-                       #breaks=c(1,2,3,4,5,6,7)) +
+    scale_y_continuous(breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) +
+    scale_x_continuous(breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) +
+    # scale_x_continuous(labels=scales::number_format(),
+                      #  limits=c(0, NA)) +
+    # scale_y_continuous(labels=scales::number_format(),
+    #                    limits=c(0, NA)) +
     geom_point(alpha=0.1) +
     labs(x=labx,
          y=laby) +
