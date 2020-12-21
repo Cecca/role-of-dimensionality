@@ -229,6 +229,24 @@ scores_plan <- drake_plan(
            width=8, height=8,
            units = "cm")
   },
+  
+  correlation_table = {
+    inner_join(
+      lid_scores %>% filter(k == 100) %>% select(-k),
+      rc_scores %>% filter(k == 100) %>% select(-k)
+    ) %>%
+    inner_join(
+      expansion_scores %>% filter(k == "10/20") %>% select(-k)
+    ) %>%
+    arrange(dataset, id) %>%
+    group_by(dataset) %>%
+    summarise(
+      lid_rc =  cor(lid,    logrc) %>% scales::number(accuracy=0.001),
+      exp_rc =  cor(logexp, logrc) %>% scales::number(accuracy=0.001),
+      lid_exp = cor(lid,    logexp) %>% scales::number(accuracy=0.001)
+    ) %>%
+    knitr::kable(format="latex", booktabs=T)
+  },
 
 )
 

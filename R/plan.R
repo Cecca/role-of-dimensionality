@@ -592,6 +592,12 @@ plan <- drake_plan(
   
   
   # ------- Performance distribution scores ------------
+
+  # perf_distribution_json = {
+  # detail() %>% 
+  #     distinct(dataset, difficulty, difficulty_type, algorithm, parameters) %>%
+
+  # },
   
   # TODO: this would be better replaced with a plot built with React/D3
   # plot_distribution = target({
