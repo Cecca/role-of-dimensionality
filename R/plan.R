@@ -641,6 +641,14 @@ plan <- drake_plan(
     ggsave("imgs/distribution_recall.pdf", plot=p,
            width = 8, height=4)
   },
+
+  plot_performance_distribution_rel = {
+    p <- data_performance_distribution_paper %>%
+      filter(algorithm %in% algorithms) %>% 
+      static_ridges_plot_rel()
+    ggsave("imgs/distribution_rel.pdf", plot=p,
+           width = 8, height=4)
+  },
   
   plot_performance_distribution_qps = data_performance_distribution_paper %>% 
       filter(algorithm %in% algorithms) %>% 

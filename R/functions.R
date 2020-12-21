@@ -508,6 +508,68 @@ do_scatter_distribution_lrc_exp <- function(data) {
 }
 
 
+static_ridges_plot_rel <- function(algo_data) {
+  averages <- algo_data %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
+    summarise(avg_time = mean(query_time), avg_rel=mean(rel)) %>%
+    mutate(qps = 1/avg_time) %>% 
+    mutate(parameters = fct_reorder(parameters, avg_rel)) %>% 
+    psel(high(qps) * low(avg_rel))
+  
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_rel), averages) %>%
+    filter(rel > 1)
+  
+  ggplot(all_points, aes(x=rel, y=qps, group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=25,
+                        size=0.1, show.legend = F) +
+    geom_point(data=averages, 
+               mapping=aes(x=avg_rel), 
+               size=0.3,
+               show.legend = F) +
+    scale_y_log10() +
+    scale_x_continuous(trans=scales::log2_trans(),
+                       limits=c(1,10)) +
+    facet_grid(vars(difficulty), vars(algorithm)) +
+    labs(y="QPS (1/s)", 
+         x="Relative error") +
+    theme_bw()
+}
+  
+static_ridges_plot_qps <- function(algo_data) {
+  dataset <- algo_data %>% distinct(dataset) %>% pull()
+  difficulty <- algo_data %>% distinct(difficulty) %>% pull()
+  difficulty_type <- algo_data %>% distinct(difficulty_type) %>% pull()
+  averages <- algo_data %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
+    summarise(avg_time = mean(query_time), avg_recall=mean(recall)) %>%
+    mutate(qps = 1/avg_time) %>% 
+    mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
+    psel(high(qps) * high(avg_recall))
+  
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
+  print(count(all_points, algorithm, difficulty, avg_recall) %>% 
+          filter(algorithm == "IVF") %>% 
+          arrange(desc(avg_recall)))
+  
+  ggplot(all_points, aes(x=1/query_time, 
+                         y=avg_recall,
+                         group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=15,
+                        size=0.1, show.legend = F) +
+    geom_point(data=averages, 
+               mapping=aes(x=qps), 
+               size=0.3,
+               show.legend = F) +
+    scale_x_log10() + 
+    scale_y_continuous(labels=c("0", "0.3", "0.6", "0.9", "")) +
+    facet_grid(vars(difficulty), vars(algorithm), scales="free_x") +
+    labs(x="QPS (1/s)", 
+         y="recall") +
+    theme_bw()
+  
+}
+
+
 static_ridges_plot_recall <- function(algo_data) {
   averages <- algo_data %>%
     group_by(algorithm, dataset, difficulty, parameters) %>%
