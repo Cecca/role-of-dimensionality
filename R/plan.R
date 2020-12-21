@@ -85,6 +85,8 @@ plan <- drake_plan(
   summarized = tbl(conn, "main") %>% 
     collect() %>%
     rename(recall = avg_recall, rel = avg_rel),
+
+  summarized_csv = write_csv(summarized, file_out("web/data/summarised.csv")),
   
   # detail = target(
   #   read_parquet("detail.parquet"),
@@ -593,11 +595,32 @@ plan <- drake_plan(
   
   # ------- Performance distribution scores ------------
 
-  # perf_distribution_json = {
-  # detail() %>% 
-  #     distinct(dataset, difficulty, difficulty_type, algorithm, parameters) %>%
-
-  # },
+  perf_distribution_part = {
+    for(algorithm_name in algorithms) {
+      for(dataset_name in datasets) {
+        for(difficulty_name in difficulties) {
+          for(difficulty_type_name in c("expansion", "lid")) {
+            part <- detail() %>%
+              filter(algorithm == algorithm_name,
+                     dataset == dataset_name,
+                     difficulty == difficulty_name,
+                     difficulty_type == difficulty_type_name) %>% 
+              collect()
+            if (nrow(part) > 0) {
+              part %>%
+                group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
+                summarise(
+                  recall_distribution = list(broom::tidy(density(recall))),
+                  rel_distribution = list(broom::tidy(density(rel))),
+                  query_time_distribution = list(broom::tidy(density(query_time)))
+                ) %>%
+              jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, "json", sep=".")))
+            }
+          }
+        }
+      }
+    }
+  },
   
   # TODO: this would be better replaced with a plot built with React/D3
   # plot_distribution = target({
