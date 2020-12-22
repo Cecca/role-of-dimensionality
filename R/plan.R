@@ -596,6 +596,8 @@ plan <- drake_plan(
   # ------- Performance distribution scores ------------
 
   perf_distribution_part = {
+    algorithms <- c("Annoy")
+    datasets <- c("GLOVE")
     for(algorithm_name in algorithms) {
       for(dataset_name in datasets) {
         for(difficulty_name in difficulties) {
@@ -610,11 +612,15 @@ plan <- drake_plan(
               part %>%
                 group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
                 summarise(
-                  recall_distribution = list(broom::tidy(density(recall))),
-                  rel_distribution = list(broom::tidy(density(rel))),
-                  query_time_distribution = list(broom::tidy(density(query_time)))
+                  recall_distribution = list(broom::tidy(density(recall, cut=0))),
+                  qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
+                  recall = mean(recall),
+                  qps = 1/mean(query_time)
                 ) %>%
-              jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, "json", sep=".")))
+                psel(high(qps) * high(recall)) %>%
+                arrange(recall) %>%
+                mutate(id = row_number()) %>%
+                jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, "json", sep=".")))
             }
           }
         }
