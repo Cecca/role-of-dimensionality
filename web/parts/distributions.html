@@ -1,31 +1,4 @@
-<html>
-
-<head>
-    <meta charset="UTF-8">
-    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
-    <title>Role of dimensionality companion website</title>
-</head>
-
-<body class="bg-gray-100">
-    <div class="bg-gray-700">
-        <div class="w-10/12 mx-auto flex flex-row pt-5 pb-5 bg-gray-700 text-gray-100">
-            <div class="flex flex-col flex-grow">
-                <span class="text-3xl">ANN benchmarks</span>
-                <span>The role of dimensionality measures</span>
-            </div>
-
-            <nav class="flex flex-row space-x-8 mt-auto mb-auto">
-                <a href="index.html">Main comparison</a>
-                <a href="distributions.html">Detailed distribution plots</a>
-            </nav>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
-
-    <div class="w-10/12 mx-auto"><div class="mt-10 grid grid-cols-6 gap-10">
+<div class="mt-10 grid grid-cols-6 gap-10">
     <div class="col-span-4" id="viz-container"></div>
     <article class="col-span-2 text-justify">
         <h1 class="text-4xl text-gray-800 text-right">Performance distribution of individual queries</h1>
@@ -54,7 +27,4 @@
     </article>
 </div>
 
-<script src="distributions.js"></script></div>
-</body>
-
-</html>
+<script src="distributions.js"></script>

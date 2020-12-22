@@ -544,7 +544,7 @@ class TwoPane extends React.Component {
         position={this.state.tooltip.position}
         data={this.state.tooltip.data}
       />
-      <div className="grid grid-cols-2 gap-5 w-11/12 mx-auto">
+      <div className="grid grid-cols-2 gap-5">
         <InteractivePlot
           dataset={this.props.data}
           highlightedCallback={this.handleHighlighted}

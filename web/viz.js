@@ -670,7 +670,7 @@ var TwoPane = function (_React$Component4) {
         }),
         React.createElement(
           "div",
-          { className: "grid grid-cols-2 gap-5 w-11/12 mx-auto" },
+          { className: "grid grid-cols-2 gap-5" },
           React.createElement(InteractivePlot, {
             dataset: this.props.data,
             highlightedCallback: this.handleHighlighted,

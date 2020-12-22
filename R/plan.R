@@ -596,10 +596,10 @@ plan <- drake_plan(
   # ------- Performance distribution scores ------------
 
   perf_distribution_part = {
-    algorithms <- c("Annoy")
-    datasets <- c("GLOVE")
-    difficulties <- c("hard")
-    types <- c("lid", "expansion")
+    # algorithms <- c("Annoy")
+    # datasets <- c("GLOVE")
+    # difficulties <- c("hard")
+    types <- c("lid", "expansion", "lrc")
     for(algorithm_name in algorithms) {
       for(dataset_name in datasets) {
         for(difficulty_name in difficulties) {
