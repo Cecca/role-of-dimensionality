@@ -320,10 +320,8 @@ class App extends React.Component {
 
         const scales = {
             xMajor: d3.scaleLinear()
-                .domain([
-                    d3.min(this.state.data, d => d3.min(d.recall_distribution, l => l.x)),
-                    d3.max(this.state.data, d => d3.max(d.recall_distribution, l => l.x)),
-                ]).range([spacing.left, spacing.width - spacing.right - spacing.margin])
+                .domain([0, 1])
+                .range([spacing.left, spacing.width - spacing.right - spacing.margin])
                 .nice(),
             xMinor: d3.scaleLinear()
                 .domain([

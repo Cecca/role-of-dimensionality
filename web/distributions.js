@@ -375,15 +375,7 @@ var App = function (_React$Component2) {
             };
 
             var scales = {
-                xMajor: d3.scaleLinear().domain([d3.min(this.state.data, function (d) {
-                    return d3.min(d.recall_distribution, function (l) {
-                        return l.x;
-                    });
-                }), d3.max(this.state.data, function (d) {
-                    return d3.max(d.recall_distribution, function (l) {
-                        return l.x;
-                    });
-                })]).range([spacing.left, spacing.width - spacing.right - spacing.margin]).nice(),
+                xMajor: d3.scaleLinear().domain([0, 1]).range([spacing.left, spacing.width - spacing.right - spacing.margin]).nice(),
                 xMinor: d3.scaleLinear().domain([d3.min(this.state.data, function (d) {
                     return d3.min(d.qps_distribution, function (l) {
                         return l.y;
