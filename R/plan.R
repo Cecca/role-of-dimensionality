@@ -598,10 +598,12 @@ plan <- drake_plan(
   perf_distribution_part = {
     algorithms <- c("Annoy")
     datasets <- c("GLOVE")
+    difficulties <- c("hard")
+    types <- c("lid", "expansion")
     for(algorithm_name in algorithms) {
       for(dataset_name in datasets) {
         for(difficulty_name in difficulties) {
-          for(difficulty_type_name in c("expansion", "lid")) {
+          for(difficulty_type_name in types) {
             part <- detail() %>%
               filter(algorithm == algorithm_name,
                      dataset == dataset_name,
@@ -612,6 +614,7 @@ plan <- drake_plan(
               part %>%
                 group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
                 summarise(
+                  # recall_histogram = list(tibble(recall=recall) %>% count(recall)),
                   recall_distribution = list(broom::tidy(density(recall, cut=0))),
                   qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
                   recall = mean(recall),
