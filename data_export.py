@@ -116,14 +116,6 @@ if __name__ == "__main__":
     parser.add_argument(
         '--output',
         help='Path to the output csv file')
-    parser.add_argument(
-        '--recompute',
-        action='store_true',
-        help='Path to the output csv file')
-    parser.add_argument(
-        '--detail',
-        action='store_true',
-        help='Output the detailed information about each single query')
     args = parser.parse_args()
 
     count = int(args.count)
