@@ -144,7 +144,7 @@ if __name__ == "__main__":
             avg_largeepsilon_recall REAL NOT NULL,
             avg_rel REAL NOT NULL,
             distcomps INTEGER NOT NULL,
-            build_time INTEGER NOT NULL,
+            build_time REAL NOT NULL,
             index_size INTEGER NOT NULL,
             queriessize REAL NOT NULL
         )

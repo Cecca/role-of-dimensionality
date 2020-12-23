@@ -233,7 +233,7 @@ def runs_to_sqlite(dataset, res, conn):
 
 
 def run_to_sqlite(data, run, properties, conn):
-    true_nn_distances = data['distances']
+    true_nn_distances = numpy.array(data['distances'])
     k = len(run['distances'][0])
     count = properties['count']
     assert(count == k)
@@ -248,8 +248,8 @@ def run_to_sqlite(data, run, properties, conn):
     rel = compute_rel(true_nn_distances, run_distances)
 
     avg_recall = float(np.mean(recall))
-    avg_epsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, epsilon=0.01)) / k)
-    avg_largeepsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, epsilon=0.1)) / k)
+    avg_epsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, k, epsilon=0.01)) / k)
+    avg_largeepsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, k, epsilon=0.1)) / k)
     avg_rel = float(np.mean(rel))
     qps = float(1/np.mean(query_times))
 
@@ -286,8 +286,8 @@ def run_to_sqlite(data, run, properties, conn):
     difficulty = difficulty
 
     distcomps = int(metrics['distcomps']['function'](true_nn_distances, run_distances, query_times, None, run.attrs))
-    build_time = run.attrs['build_time']
-    index_size = run.attrs.get("index_size", 0)
+    build_time = float(run.attrs['build_time'])
+    index_size = int(run.attrs.get("index_size", 0))
 
     # Do the insertion in the two tables in a transaction
     with conn:
@@ -315,7 +315,7 @@ def run_to_sqlite(data, run, properties, conn):
             )
             """,
             {
-                "count": count,
+                "k": count,
                 "dataset": dataset,
                 "algorithm": algorithm,
                 "parameters": parameters,
