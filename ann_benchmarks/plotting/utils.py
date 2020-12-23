@@ -235,6 +235,8 @@ def runs_to_sqlite(dataset, res, conn):
 def run_to_sqlite(data, run, properties, conn):
     true_nn_distances = data['distances']
     k = len(run['distances'][0])
+    count = properties['count']
+    assert(count == k)
     algo = properties["algo"]
     algo_name = properties["name"]
     dataset = properties['dataset']
@@ -246,8 +248,11 @@ def run_to_sqlite(data, run, properties, conn):
     rel = compute_rel(true_nn_distances, run_distances)
 
     avg_recall = float(np.mean(recall))
+    avg_epsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, epsilon=0.01)) / k)
+    avg_largeepsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, epsilon=0.1)) / k)
     avg_rel = float(np.mean(rel))
     qps = float(1/np.mean(query_times))
+
 
     # Data frame to store the query stats data
     df = pd.DataFrame({
@@ -279,15 +284,57 @@ def run_to_sqlite(data, run, properties, conn):
     parameters = algo_name
     difficulty_type = difficulty_type
     difficulty = difficulty
+
     distcomps = int(metrics['distcomps']['function'](true_nn_distances, run_distances, query_times, None, run.attrs))
+    build_time = run.attrs['build_time']
+    index_size = run.attrs.get("index_size", 0)
 
     # Do the insertion in the two tables in a transaction
     with conn:
         # Null is for the auto increment key
         # TODO: add the averaged values of the metrics
         cursor = conn.execute(
-            "INSERT INTO main VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (dataset, algorithm, parameters, difficulty_type, difficulty, qps, avg_recall, avg_rel, distcomps))
+            """
+            INSERT INTO main VALUES (
+                NULL,
+                :k,
+                :dataset,
+                :algorithm,
+                :parameters,
+                :difficulty_type,
+                :difficulty,
+                :qps,
+                :avg_recall,
+                :avg_epsilon_recall,
+                :avg_largeepsilon_recall,
+                :avg_rel,
+                :distcomps,
+                :build_time,
+                :index_size,
+                :queriessize
+            )
+            """,
+            {
+                "count": count,
+                "dataset": dataset,
+                "algorithm": algorithm,
+                "parameters": parameters,
+                "difficulty_type": difficulty_type,
+                "difficulty": difficulty,
+                "qps": qps,
+                "avg_recall": avg_recall,
+                "avg_epsilon_recall": avg_epsilon_recall,
+                "avg_largeepsilon_recall": avg_largeepsilon_recall,
+                "avg_rel": avg_rel,
+                "distcomps": distcomps,
+                "build_time": build_time,
+                "index_size": index_size,
+                "queriessize": index_size / qps
+            }
+        )
+        # cursor = conn.execute(
+        #     "INSERT INTO main VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        #     (dataset, algorithm, parameters, difficulty_type, difficulty, qps, avg_recall, avg_rel, distcomps))
         idx = cursor.lastrowid
 
         df['id'] = idx
