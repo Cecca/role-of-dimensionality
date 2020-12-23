@@ -190,7 +190,8 @@ function paretoFrontier(points, aesX, aesY) {
     return inner(toPoint(a), toPoint(b));
   };
 
-  var findMax = !(pointComparator([0, 1], [0, 0]) < 0); // Optimize +y
+  // const findMax = (pointComparator([0, 1], [0, 0]) < 0); // Optimize +y
+  var findMax = bestY === "max";
 
   var sorted = Array.from(points).sort(pointComparator);
 
