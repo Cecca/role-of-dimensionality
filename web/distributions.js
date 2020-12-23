@@ -12,7 +12,7 @@ var datasets = ["GLOVE", "GLOVE-2M", "GNEWS", "SIFT", "Fashion-MNIST", "MNIST"];
 
 var difficulties = ["hard", "diverse", "middle", "easy"];
 
-var difficultyTypes = ["lid", "rc", "expansion"];
+var difficultyTypes = ["lid", "lrc", "expansion"];
 
 var algorithms = ["Annoy", "PUFFINN", "ONNG", "HNSW", "IVF"];
 

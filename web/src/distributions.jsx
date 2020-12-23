@@ -17,7 +17,7 @@ const difficulties = [
 ];
 
 const difficultyTypes = [
-    "lid", "rc", "expansion"
+    "lid", "lrc", "expansion"
 ];
 
 const algorithms = [
