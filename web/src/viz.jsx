@@ -6,10 +6,47 @@ function Button(props) {
   </rect>;
 }
 
+function GridLines(props) {
+  const xLines = props.scales.x
+    .ticks()
+    .map((t, i) => {
+      const xVal = props.scales.x(t);
+      const yStart = props.scales.y.range()[0];
+      const yEnd = props.scales.y.range()[1];
+      return <path
+        key={i}
+        stroke={"lightgray"}
+        strokeDasharray={"2,2"}
+        d={`M ${xVal} ${yStart} V ${yEnd}`}
+      />;
+    });
+  const yLines = props.scales.y
+    .ticks()
+    .map((t, i) => {
+      const yVal = props.scales.y(t);
+      const xStart = props.scales.x.range()[0];
+      const xEnd = props.scales.x.range()[1];
+      return <path
+        key={i}
+        stroke={"lightgray"}
+        strokeDasharray={"2,2"}
+        d={`M ${xStart} ${yVal} H ${xEnd}`}
+      />;
+    });
+  return <g>
+    {xLines}
+    {yLines}
+  </g>;
+}
+
 function LeftAxis(props) {
+  const format = props.scale.tickFormat();
 
   const ticks = props.scale.ticks()
-    .map(value => ({ value, yOffset: props.scale(value) }));
+    .map(value => ({
+      value: format(value),
+      yOffset: props.scale(value)
+    }));
 
   return <g transform={`translate(${props.spacing.left} , 0)`}>
     <path d={`M0,${props.spacing.height - props.spacing.bottom}L0,${props.spacing.top}`}
@@ -37,9 +74,13 @@ function LeftAxis(props) {
 }
 
 function BottomAxis(props) {
+  const format = props.scale.tickFormat();
 
   const ticks = props.scale.ticks()
-    .map(value => ({ value, xOffset: props.scale(value) }));
+    .map(value => ({
+      value: format(value),
+      xOffset: props.scale(value)
+    }));
 
   const startScale = props.scale.range()[0];
   const endScale = props.scale.range()[1];
@@ -202,6 +243,7 @@ function ParetoPlot(props) {
     <ColorLegend levels={d3.union(props.data.map(d => d[props.aes.color]))} scale={props.scales.color} />
     {/* <svg width={props.spacing.width} height={props.spacing.height}> */}
     <svg viewBox={`0 0 ${props.spacing.width} ${props.spacing.height}`}>
+      <GridLines scales={props.scales} />
       <Circles
         data={plotData}
         aes={props.aes}

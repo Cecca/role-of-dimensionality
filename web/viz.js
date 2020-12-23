@@ -20,10 +20,45 @@ function Button(props) {
   );
 }
 
+function GridLines(props) {
+  var xLines = props.scales.x.ticks().map(function (t, i) {
+    var xVal = props.scales.x(t);
+    var yStart = props.scales.y.range()[0];
+    var yEnd = props.scales.y.range()[1];
+    return React.createElement("path", {
+      key: i,
+      stroke: "lightgray",
+      strokeDasharray: "2,2",
+      d: "M " + xVal + " " + yStart + " V " + yEnd
+    });
+  });
+  var yLines = props.scales.y.ticks().map(function (t, i) {
+    var yVal = props.scales.y(t);
+    var xStart = props.scales.x.range()[0];
+    var xEnd = props.scales.x.range()[1];
+    return React.createElement("path", {
+      key: i,
+      stroke: "lightgray",
+      strokeDasharray: "2,2",
+      d: "M " + xStart + " " + yVal + " H " + xEnd
+    });
+  });
+  return React.createElement(
+    "g",
+    null,
+    xLines,
+    yLines
+  );
+}
+
 function LeftAxis(props) {
+  var format = props.scale.tickFormat();
 
   var ticks = props.scale.ticks().map(function (value) {
-    return { value: value, yOffset: props.scale(value) };
+    return {
+      value: format(value),
+      yOffset: props.scale(value)
+    };
   });
 
   return React.createElement(
@@ -56,9 +91,13 @@ function LeftAxis(props) {
 }
 
 function BottomAxis(props) {
+  var format = props.scale.tickFormat();
 
   var ticks = props.scale.ticks().map(function (value) {
-    return { value: value, xOffset: props.scale(value) };
+    return {
+      value: format(value),
+      xOffset: props.scale(value)
+    };
   });
 
   var startScale = props.scale.range()[0];
@@ -265,6 +304,7 @@ function ParetoPlot(props) {
     React.createElement(
       "svg",
       { viewBox: "0 0 " + props.spacing.width + " " + props.spacing.height },
+      React.createElement(GridLines, { scales: props.scales }),
       React.createElement(Circles, {
         data: plotData,
         aes: props.aes,

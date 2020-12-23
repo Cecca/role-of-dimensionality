@@ -146,6 +146,37 @@ var DataForm = function (_React$Component) {
     return DataForm;
 }(React.Component);
 
+function GridLines(props) {
+    var xLines = props.scales.xMajor.ticks().map(function (t, i) {
+        var xVal = props.scales.xMajor(t);
+        var yStart = props.scales.yMajor.range()[0];
+        var yEnd = props.scales.yMajor.range()[1];
+        return React.createElement("path", {
+            key: i,
+            stroke: "lightgray",
+            strokeDasharray: "2,2",
+            d: "M " + xVal + " " + yStart + " V " + yEnd
+        });
+    });
+    var yLines = props.scales.yMajor.ticks().map(function (t, i) {
+        var yVal = props.scales.yMajor(t);
+        var xStart = props.scales.xMajor.range()[0];
+        var xEnd = props.scales.xMajor.range()[1];
+        return React.createElement("path", {
+            key: i,
+            stroke: "lightgray",
+            strokeDasharray: "2,2",
+            d: "M " + xStart + " " + yVal + " H " + xEnd
+        });
+    });
+    return React.createElement(
+        "g",
+        null,
+        xLines,
+        yLines
+    );
+}
+
 function LeftAxis(props) {
 
     var ticks = props.scale.ticks().filter(function (value) {
@@ -231,6 +262,7 @@ function Plot(props) {
         React.createElement(
             "svg",
             { viewBox: "0 0 " + props.spacing.width + " " + props.spacing.height },
+            React.createElement(GridLines, { scales: props.scales }),
 
             // Highlighted circle
             props.highlighted.map(function (d) {

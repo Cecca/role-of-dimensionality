@@ -123,6 +123,39 @@ class DataForm extends React.Component {
     }
 }
 
+function GridLines(props) {
+    const xLines = props.scales.xMajor
+        .ticks()
+        .map((t, i) => {
+            const xVal = props.scales.xMajor(t);
+            const yStart = props.scales.yMajor.range()[0];
+            const yEnd = props.scales.yMajor.range()[1];
+            return <path
+                key={i}
+                stroke={"lightgray"}
+                strokeDasharray={"2,2"}
+                d={`M ${xVal} ${yStart} V ${yEnd}`}
+            />;
+        });
+    const yLines = props.scales.yMajor
+        .ticks()
+        .map((t, i) => {
+            const yVal = props.scales.yMajor(t);
+            const xStart = props.scales.xMajor.range()[0];
+            const xEnd = props.scales.xMajor.range()[1];
+            return <path
+                key={i}
+                stroke={"lightgray"}
+                strokeDasharray={"2,2"}
+                d={`M ${xStart} ${yVal} H ${xEnd}`}
+            />;
+        });
+    return <g>
+        {xLines}
+        {yLines}
+    </g>;
+}
+
 function LeftAxis(props) {
 
     const ticks = props.scale.ticks()
@@ -190,6 +223,7 @@ function Plot(props) {
 
     return <div className="w-full">
         <svg viewBox={`0 0 ${props.spacing.width} ${props.spacing.height}`}>
+            <GridLines scales={props.scales} />
             {
                 // Highlighted circle
                 props.highlighted.map(d => {
