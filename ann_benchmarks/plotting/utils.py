@@ -235,7 +235,7 @@ def runs_to_sqlite(dataset, res, conn):
 def run_to_sqlite(data, run, properties, conn):
     true_nn_distances = numpy.array(data['distances'])
     k = len(run['distances'][0])
-    count = properties['count']
+    count = int(properties['count'])
     assert(count == k)
     algo = properties["algo"]
     algo_name = properties["name"]
