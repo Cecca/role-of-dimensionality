@@ -12,4 +12,3 @@ distributions.js: src/distributions.jsx
 
 viz.js: src/viz.jsx
 	npx babel src --out-dir . --presets react-app/prod	
-

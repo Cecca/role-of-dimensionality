@@ -116,7 +116,7 @@ const bestDirection = {
   "largeepsilon": "max",
   "qps": "max",
   "rel": "min",
-  "indexsize": "min",
+  "index_size": "min",
   "distcomps": "min"
 };
 
@@ -126,7 +126,7 @@ const dependentMetrics = {
   "largeepsilon": false,
   "rel": false,
   "qps": true,
-  "indexsize": true,
+  "index_size": true,
   "distcomps": true
 }
 
@@ -303,6 +303,7 @@ class FixedFactorSelector extends React.Component {
 class AestheticsSelector extends React.Component {
   constructor(props) {
     super(props);
+    console.log(props.aesValues);
   }
 
   render() {
@@ -359,12 +360,12 @@ class InteractivePlot extends React.Component {
     };
 
     this.metrics = [
-      { "name": "build", "label": "Build time", "trans": "log" },
+      { "name": "build_time", "label": "Build time", "trans": "log" },
       { "name": "distcomps", "label": "Number of distance computations", "trans": "lin" },
       { "name": "recall", "label": "Recall", "default": "x", "trans": "lin" },
       { "name": "epsilon", "label": "epsilon recall", "trans": "lin" },
       { "name": "largeepsilon", "label": "large epsilon recall", "trans": "lin" },
-      { "name": "indexsize", "label": "Index size", "trans": "lin" },
+      { "name": "index_size", "label": "Index size", "trans": "lin" },
       { "name": "qps", "label": "Queries per second", "trans": "log" },
       { "name": "rel", "label": "Relative error", "trans": "lin" },
       { "name": "queriessize", "label": "Queries size", "trans": "lin" }
@@ -532,7 +533,7 @@ function Tooltip(props) {
           position: "absolute"
         }}>
         {
-          ["recall", "rel", "qps", "distcomps", "indexsize"].map(m => {
+          ["recall", "rel", "qps", "distcomps", "index_size"].map(m => {
             return <span>
               <span className="text-gray-400">{m}: </span>{num(props.data[m])}
             </span>;

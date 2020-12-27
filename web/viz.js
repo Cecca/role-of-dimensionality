@@ -138,7 +138,7 @@ var bestDirection = {
   "largeepsilon": "max",
   "qps": "max",
   "rel": "min",
-  "indexsize": "min",
+  "index_size": "min",
   "distcomps": "min"
 };
 
@@ -148,7 +148,7 @@ var dependentMetrics = {
   "largeepsilon": false,
   "rel": false,
   "qps": true,
-  "indexsize": true,
+  "index_size": true,
   "distcomps": true
 };
 
@@ -381,7 +381,10 @@ var AestheticsSelector = function (_React$Component2) {
   function AestheticsSelector(props) {
     _classCallCheck(this, AestheticsSelector);
 
-    return _possibleConstructorReturn(this, (AestheticsSelector.__proto__ || Object.getPrototypeOf(AestheticsSelector)).call(this, props));
+    var _this2 = _possibleConstructorReturn(this, (AestheticsSelector.__proto__ || Object.getPrototypeOf(AestheticsSelector)).call(this, props));
+
+    console.log(props.aesValues);
+    return _this2;
   }
 
   _createClass(AestheticsSelector, [{
@@ -451,7 +454,7 @@ var InteractivePlot = function (_React$Component3) {
       }
     };
 
-    _this3.metrics = [{ "name": "build", "label": "Build time", "trans": "log" }, { "name": "distcomps", "label": "Number of distance computations", "trans": "lin" }, { "name": "recall", "label": "Recall", "default": "x", "trans": "lin" }, { "name": "epsilon", "label": "epsilon recall", "trans": "lin" }, { "name": "largeepsilon", "label": "large epsilon recall", "trans": "lin" }, { "name": "indexsize", "label": "Index size", "trans": "lin" }, { "name": "qps", "label": "Queries per second", "trans": "log" }, { "name": "rel", "label": "Relative error", "trans": "lin" }, { "name": "queriessize", "label": "Queries size", "trans": "lin" }];
+    _this3.metrics = [{ "name": "build_time", "label": "Build time", "trans": "log" }, { "name": "distcomps", "label": "Number of distance computations", "trans": "lin" }, { "name": "recall", "label": "Recall", "default": "x", "trans": "lin" }, { "name": "epsilon", "label": "epsilon recall", "trans": "lin" }, { "name": "largeepsilon", "label": "large epsilon recall", "trans": "lin" }, { "name": "index_size", "label": "Index size", "trans": "lin" }, { "name": "qps", "label": "Queries per second", "trans": "log" }, { "name": "rel", "label": "Relative error", "trans": "lin" }, { "name": "queriessize", "label": "Queries size", "trans": "lin" }];
 
     _this3.factors = [{ "name": "algorithm", label: "Algorithm" }, { "name": "dataset", label: "Dataset" }, { "name": "difficulty", label: "Difficulty" }, { "name": "difficulty_type", label: "Difficulty type" }];
 
@@ -638,7 +641,7 @@ function Tooltip(props) {
           top: props.position[1] + 10 + "px",
           position: "absolute"
         } },
-      ["recall", "rel", "qps", "distcomps", "indexsize"].map(function (m) {
+      ["recall", "rel", "qps", "distcomps", "index_size"].map(function (m) {
         return React.createElement(
           "span",
           null,

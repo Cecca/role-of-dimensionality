@@ -599,11 +599,18 @@ plan <- drake_plan(
     # algorithms <- c("Annoy")
     # datasets <- c("GLOVE")
     # difficulties <- c("hard")
+    cat(str_wrap("We will now compute distributions for several configurations of all
+                  combinations of algorithms/datasets. This will take a long time.
+                  Index the database to speed this up.\n"))
     types <- c("lid", "expansion", "lrc")
+    n <- length(algorithms) * length(datasets) * length(difficulties) * length(types)
+    i <- 1
     for(algorithm_name in algorithms) {
       for(dataset_name in datasets) {
         for(difficulty_name in difficulties) {
           for(difficulty_type_name in types) {
+            cat(paste0(i, "/", n, "\n"))
+            i <- i + 1
             part <- detail() %>%
               filter(algorithm == algorithm_name,
                      dataset == dataset_name,
@@ -620,8 +627,8 @@ plan <- drake_plan(
                   recall = mean(recall),
                   qps = 1/mean(query_time)
                 ) %>%
-                psel(high(qps) * high(recall)) %>%
                 arrange(recall) %>%
+                psel(high(qps) * high(recall)) %>%
                 mutate(id = row_number()) %>%
                 jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, "json", sep=".")))
             }
