@@ -245,13 +245,22 @@ function BottomAxis(props) {
 }
 
 function Plot(props) {
+    // Scale the distributions curves so that the peak has always the same height.
+    // Therefore they no longer have area 1, but are more readable.
+    var yTopScale = props.highlighted.length > 0 ? props.scales.yMinor.copy().domain(d3.extent(props.highlighted[0].recall_distribution.map(function (d) {
+        return d.y;
+    }))) : props.scales.yMinor;
+    var xRightScale = props.highlighted.length > 0 ? props.scales.xMinor.copy().domain(d3.extent(props.highlighted[0].qps_distribution.map(function (d) {
+        return d.y;
+    }))) : props.scales.xMinor;
+
     var topDistributionLine = d3.line().x(function (d) {
         return props.scales.xMajor(d.x);
     }).y(function (d) {
-        return props.scales.yMinor(d.y);
+        return yTopScale(d.y);
     });
     var rightDistributionLine = d3.line().x(function (d) {
-        return props.scales.xMinor(d.y);
+        return xRightScale(d.y);
     }).y(function (d) {
         return props.scales.yMajor(d.x);
     });

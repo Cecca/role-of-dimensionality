@@ -454,7 +454,7 @@ var InteractivePlot = function (_React$Component3) {
       }
     };
 
-    _this3.metrics = [{ "name": "build_time", "label": "Build time", "trans": "log" }, { "name": "distcomps", "label": "Number of distance computations", "trans": "lin" }, { "name": "recall", "label": "Recall", "default": "x", "trans": "lin" }, { "name": "epsilon", "label": "epsilon recall", "trans": "lin" }, { "name": "largeepsilon", "label": "large epsilon recall", "trans": "lin" }, { "name": "index_size", "label": "Index size", "trans": "lin" }, { "name": "qps", "label": "Queries per second", "trans": "log" }, { "name": "rel", "label": "Relative error", "trans": "lin" }, { "name": "queriessize", "label": "Queries size", "trans": "lin" }];
+    _this3.metrics = [{ "name": "qps", "label": "Queries per second", "trans": "log" }, { "name": "distcomps", "label": "Number of distance computations", "trans": "lin" }, { "name": "index_size", "label": "Index size", "trans": "lin" }, { "name": "build_time", "label": "Build time", "trans": "log" }, { "name": "queriessize", "label": "Queries size", "trans": "lin" }, { "name": "recall", "label": "Recall", "default": "x", "trans": "lin" }, { "name": "epsilon", "label": "epsilon recall", "trans": "lin" }, { "name": "largeepsilon", "label": "large epsilon recall", "trans": "lin" }, { "name": "rel", "label": "Relative error", "trans": "lin" }];
 
     _this3.factors = [{ "name": "algorithm", label: "Algorithm" }, { "name": "dataset", label: "Dataset" }, { "name": "difficulty", label: "Difficulty" }, { "name": "difficulty_type", label: "Difficulty type" }];
 

@@ -214,11 +214,18 @@ function BottomAxis(props) {
 
 
 function Plot(props) {
+    // Scale the distributions curves so that the peak has always the same height.
+    // Therefore they no longer have area 1, but are more readable.
+    const yTopScale = (props.highlighted.length > 0) ? props.scales.yMinor.copy()
+        .domain(d3.extent(props.highlighted[0].recall_distribution.map(d => d.y))) : props.scales.yMinor;
+    const xRightScale = (props.highlighted.length > 0) ? props.scales.xMinor.copy()
+        .domain(d3.extent(props.highlighted[0].qps_distribution.map(d => d.y))) : props.scales.xMinor;
+
     const topDistributionLine = d3.line()
         .x(d => props.scales.xMajor(d.x))
-        .y(d => props.scales.yMinor(d.y));
+        .y(d => yTopScale(d.y));
     const rightDistributionLine = d3.line()
-        .x(d => props.scales.xMinor(d.y))
+        .x(d => xRightScale(d.y))
         .y(d => props.scales.yMajor(d.x));
 
     return <div className="w-full">
