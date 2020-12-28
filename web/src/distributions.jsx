@@ -28,6 +28,8 @@ const algorithms = [
     "IVF"
 ];
 
+const kValues = [10];
+
 class DataForm extends React.Component {
     constructor(props) {
         super(props);
@@ -35,13 +37,15 @@ class DataForm extends React.Component {
             dataset: props.datasets[0],
             difficulty: props.difficulties[0],
             difficultyType: props.difficultyTypes[0],
-            algorithm: props.algorithms[0]
+            algorithm: props.algorithms[0],
+            k: props.kValues[0]
         };
 
         this.handleDataset = this.handleDataset.bind(this);
         this.handleDifficulty = this.handleDifficulty.bind(this);
         this.handleDifficultyType = this.handleDifficultyType.bind(this);
         this.handleAlgorithm = this.handleAlgorithm.bind(this);
+        this.handleK = this.handleK.bind(this);
     }
 
     componentDidMount() {
@@ -54,6 +58,7 @@ class DataForm extends React.Component {
             this.state.dataset,
             this.state.difficulty,
             this.state.difficultyType,
+            this.state.k,
             "json"
         ].join(".");
         this.props.callback(fname);
@@ -73,6 +78,10 @@ class DataForm extends React.Component {
 
     handleAlgorithm(event) {
         this.setState({ algorithm: event.target.value }, this.callback);
+    }
+
+    handleK(event) {
+        this.setState({ k: event.target.value }, this.callback);
     }
 
     render() {
@@ -110,9 +119,19 @@ class DataForm extends React.Component {
                 </label>
                 <label>
                     Algorithm
-                    <select value={this.state.handleAlgorithm} onChange={this.handleAlgorithm}>
+                    <select value={this.state.algorithm} onChange={this.handleAlgorithm}>
                         {
                             this.props.algorithms.map(d => <option key={d} value={d}>
+                                {d}
+                            </option>)
+                        }
+                    </select>
+                </label>
+                <label>
+                    K
+                    <select value={this.state.handleK} onChange={this.handleK}>
+                        {
+                            this.props.kValues.map(d => <option key={d} value={d}>
                                 {d}
                             </option>)
                         }
@@ -391,6 +410,7 @@ class App extends React.Component {
             difficulties={difficulties}
             difficultyTypes={difficultyTypes}
             algorithms={algorithms}
+            kValues={kValues}
             callback={this.handleDataChange}
         />;
 

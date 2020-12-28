@@ -16,6 +16,8 @@ var difficultyTypes = ["lid", "lrc", "expansion"];
 
 var algorithms = ["Annoy", "PUFFINN", "ONNG", "HNSW", "IVF"];
 
+var kValues = [10];
+
 var DataForm = function (_React$Component) {
     _inherits(DataForm, _React$Component);
 
@@ -28,13 +30,15 @@ var DataForm = function (_React$Component) {
             dataset: props.datasets[0],
             difficulty: props.difficulties[0],
             difficultyType: props.difficultyTypes[0],
-            algorithm: props.algorithms[0]
+            algorithm: props.algorithms[0],
+            k: props.kValues[0]
         };
 
         _this.handleDataset = _this.handleDataset.bind(_this);
         _this.handleDifficulty = _this.handleDifficulty.bind(_this);
         _this.handleDifficultyType = _this.handleDifficultyType.bind(_this);
         _this.handleAlgorithm = _this.handleAlgorithm.bind(_this);
+        _this.handleK = _this.handleK.bind(_this);
         return _this;
     }
 
@@ -46,7 +50,7 @@ var DataForm = function (_React$Component) {
     }, {
         key: "callback",
         value: function callback() {
-            var fname = "data/" + [this.state.algorithm, this.state.dataset, this.state.difficulty, this.state.difficultyType, "json"].join(".");
+            var fname = "data/" + [this.state.algorithm, this.state.dataset, this.state.difficulty, this.state.difficultyType, this.state.k, "json"].join(".");
             this.props.callback(fname);
         }
     }, {
@@ -68,6 +72,11 @@ var DataForm = function (_React$Component) {
         key: "handleAlgorithm",
         value: function handleAlgorithm(event) {
             this.setState({ algorithm: event.target.value }, this.callback);
+        }
+    }, {
+        key: "handleK",
+        value: function handleK(event) {
+            this.setState({ k: event.target.value }, this.callback);
         }
     }, {
         key: "render",
@@ -129,8 +138,24 @@ var DataForm = function (_React$Component) {
                     "Algorithm",
                     React.createElement(
                         "select",
-                        { value: this.state.handleAlgorithm, onChange: this.handleAlgorithm },
+                        { value: this.state.algorithm, onChange: this.handleAlgorithm },
                         this.props.algorithms.map(function (d) {
+                            return React.createElement(
+                                "option",
+                                { key: d, value: d },
+                                d
+                            );
+                        })
+                    )
+                ),
+                React.createElement(
+                    "label",
+                    null,
+                    "K",
+                    React.createElement(
+                        "select",
+                        { value: this.state.handleK, onChange: this.handleK },
+                        this.props.kValues.map(function (d) {
                             return React.createElement(
                                 "option",
                                 { key: d, value: d },
@@ -451,6 +476,7 @@ var App = function (_React$Component2) {
                 difficulties: difficulties,
                 difficultyTypes: difficultyTypes,
                 algorithms: algorithms,
+                kValues: kValues,
                 callback: this.handleDataChange
             });
 

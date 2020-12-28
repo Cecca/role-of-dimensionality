@@ -456,7 +456,7 @@ var InteractivePlot = function (_React$Component3) {
 
     _this3.metrics = [{ "name": "qps", "label": "Queries per second", "trans": "log" }, { "name": "distcomps", "label": "Number of distance computations", "trans": "lin" }, { "name": "index_size", "label": "Index size", "trans": "lin" }, { "name": "build_time", "label": "Build time", "trans": "log" }, { "name": "queriessize", "label": "Queries size", "trans": "lin" }, { "name": "recall", "label": "Recall", "default": "x", "trans": "lin" }, { "name": "epsilon", "label": "epsilon recall", "trans": "lin" }, { "name": "largeepsilon", "label": "large epsilon recall", "trans": "lin" }, { "name": "rel", "label": "Relative error", "trans": "lin" }];
 
-    _this3.factors = [{ "name": "algorithm", label: "Algorithm" }, { "name": "dataset", label: "Dataset" }, { "name": "difficulty", label: "Difficulty" }, { "name": "difficulty_type", label: "Difficulty type" }];
+    _this3.factors = [{ "name": "algorithm", label: "Algorithm" }, { "name": "dataset", label: "Dataset" }, { "name": "difficulty", label: "Difficulty" }, { "name": "difficulty_type", label: "Difficulty type" }, { "name": "k", label: "K" }];
 
     _this3.factorLevels = {
       algorithm: Array.from(d3.union(_this3.props.dataset.map(function (d) {
@@ -470,6 +470,9 @@ var InteractivePlot = function (_React$Component3) {
       }))),
       difficulty_type: Array.from(d3.union(_this3.props.dataset.map(function (d) {
         return d.difficulty_type;
+      }))),
+      k: Array.from(d3.union(_this3.props.dataset.map(function (d) {
+        return d.k;
       })))
     };
 

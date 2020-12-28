@@ -375,14 +375,16 @@ class InteractivePlot extends React.Component {
       { "name": "algorithm", label: "Algorithm" },
       { "name": "dataset", label: "Dataset" },
       { "name": "difficulty", label: "Difficulty" },
-      { "name": "difficulty_type", label: "Difficulty type" }
+      { "name": "difficulty_type", label: "Difficulty type" },
+      { "name": "k", label: "K" }
     ]
 
     this.factorLevels = {
       algorithm: Array.from(d3.union(this.props.dataset.map(d => d.algorithm))),
       dataset: Array.from(d3.union(this.props.dataset.map(d => d.dataset))),
       difficulty: Array.from(d3.union(this.props.dataset.map(d => d.difficulty))),
-      difficulty_type: Array.from(d3.union(this.props.dataset.map(d => d.difficulty_type)))
+      difficulty_type: Array.from(d3.union(this.props.dataset.map(d => d.difficulty_type))),
+      k: Array.from(d3.union(this.props.dataset.map(d => d.k)))
     };
 
     this.handleXaxisClick = this.handleXaxisClick.bind(this);
