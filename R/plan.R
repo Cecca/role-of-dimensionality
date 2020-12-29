@@ -85,10 +85,15 @@ plan <- drake_plan(
   # ------- Data --------
   # summarized = load_results("summarised.csv.bz2"),
   summarized = tbl(conn, "main") %>% 
+    filter(k == 10) %>%
     collect() %>%
     rename(recall = avg_recall, rel = avg_rel),
 
-  summarized_csv = write_csv(summarized, file_out("web/data/summarised.csv")),
+  summarized_all = tbl(conn, "main") %>% 
+    collect() %>%
+    rename(recall = avg_recall, rel = avg_rel),
+
+  summarized_csv = write_csv(summarized_all, file_out("web/data/summarised.csv")),
   
   # detail = target(
   #   read_parquet("detail.parquet"),
@@ -597,83 +602,84 @@ plan <- drake_plan(
   
   # ------- Performance distribution scores ------------
 
-  perf_distribution_part = {
-    # algorithms <- c("Annoy")
-    # datasets <- c("GLOVE")
-    # difficulties <- c("hard")
-    cat(str_wrap("We will now compute distributions for several configurations of all
-                  combinations of algorithms/datasets. This will take a long time.
-                  Index the database to speed this up.\n"))
-    types <- c("lid", "expansion", "lrc")
-    n <- length(algorithms) * length(datasets) * length(difficulties) * length(types) * length(kValues)
-    i <- 1
-    for(algorithm_name in algorithms) {
-      for(dataset_name in datasets) {
-        for(difficulty_name in difficulties) {
-          for(difficulty_type_name in types) {
-            for(kValue in kValues) {
-              cat(paste0(i, "/", n, "\n"))
-              i <- i + 1
-              part <- detail() %>%
-                filter(algorithm == algorithm_name,
-                      dataset == dataset_name,
-                      difficulty == difficulty_name,
-                      difficulty_type == difficulty_type_name,
-                      k == kValue) %>% 
-                collect()
-              if (nrow(part) > 0) {
-                part %>%
-                  group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
-                  summarise(
-                    # recall_histogram = list(tibble(recall=recall) %>% count(recall)),
-                    recall_distribution = list(broom::tidy(density(recall, cut=0))),
-                    qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
-                    recall = mean(recall),
-                    qps = 1/mean(query_time)
-                  ) %>%
-                  arrange(recall) %>%
-                  psel(high(qps) * high(recall)) %>%
-                  mutate(id = row_number()) %>%
-                  jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, kValue, "json", sep=".")))
-              }
-            }
-          }
-        }
-      }
-    }
-  },
+  # perf_distribution_part = {
+  #   # algorithms <- c("Annoy")
+  #   # datasets <- c("GLOVE")
+  #   # difficulties <- c("hard")
+  #   cat(str_wrap("We will now compute distributions for several configurations of all
+  #                 combinations of algorithms/datasets. This will take a long time.
+  #                 Index the database to speed this up.\n"))
+  #   types <- c("lid", "expansion", "lrc")
+  #   n <- length(algorithms) * length(datasets) * length(difficulties) * length(types) * length(kValues)
+  #   i <- 1
+  #   for(algorithm_name in algorithms) {
+  #     for(dataset_name in datasets) {
+  #       for(difficulty_name in difficulties) {
+  #         for(difficulty_type_name in types) {
+  #           for(kValue in kValues) {
+  #             cat(paste0(i, "/", n, "\n"))
+  #             i <- i + 1
+  #             part <- detail() %>%
+  #               filter(algorithm == algorithm_name,
+  #                     dataset == dataset_name,
+  #                     difficulty == difficulty_name,
+  #                     difficulty_type == difficulty_type_name,
+  #                     k == kValue) %>% 
+  #               collect()
+  #             if (nrow(part) > 0) {
+  #               part %>%
+  #                 group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
+  #                 summarise(
+  #                   # recall_histogram = list(tibble(recall=recall) %>% count(recall)),
+  #                   recall_distribution = list(broom::tidy(density(recall, cut=0))),
+  #                   qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
+  #                   recall = mean(recall),
+  #                   qps = 1/mean(query_time)
+  #                 ) %>%
+  #                 arrange(recall) %>%
+  #                 psel(high(qps) * high(recall)) %>%
+  #                 mutate(id = row_number()) %>%
+  #                 jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, kValue, "json", sep=".")))
+  #             }
+  #           }
+  #         }
+  #       }
+  #     }
+  #   }
+  # },
   
-  # TODO: this would be better replaced with a plot built with React/D3
-  # plot_distribution = target({
-  #   plot_data <- detail() %>%
-  #     filter(algorithm == algorithm_name,
-  #            dataset == dataset_name,
-  #            difficulty == difficulty_name,
-  #            difficulty_type == difficulty_type_name) %>% 
-  #     collect()
-  #   interactive_distribution_plot(plot_data)
-  #   },
-  #   transform = cross(
-  #     algorithm_name = !!algorithms,
-  #     dataset_name = !!datasets,
-  #     difficulty_name = !!difficulties,
-  #     difficulty_type_name = c("expansion", "lid")
-  #   )
-  # ),
-  #
-  # figure_distribution = target(
-  #   htmlwidgets::saveWidget(plot_distribution,
-  #                           here("imgs", str_c("perf-distribution-",
-  #                                              dataset_name, "-",
-  #                                              difficulty_name, "-",
-  #                                              difficulty_type_name, "-",
-  #                                              algorithm_name,
-  #                                              ".html"))),
-  #   transform = map(plot_distribution)
-  # ),
+  # # TODO: this would be better replaced with a plot built with React/D3
+  # # plot_distribution = target({
+  # #   plot_data <- detail() %>%
+  # #     filter(algorithm == algorithm_name,
+  # #            dataset == dataset_name,
+  # #            difficulty == difficulty_name,
+  # #            difficulty_type == difficulty_type_name) %>% 
+  # #     collect()
+  # #   interactive_distribution_plot(plot_data)
+  # #   },
+  # #   transform = cross(
+  # #     algorithm_name = !!algorithms,
+  # #     dataset_name = !!datasets,
+  # #     difficulty_name = !!difficulties,
+  # #     difficulty_type_name = c("expansion", "lid")
+  # #   )
+  # # ),
+  # #
+  # # figure_distribution = target(
+  # #   htmlwidgets::saveWidget(plot_distribution,
+  # #                           here("imgs", str_c("perf-distribution-",
+  # #                                              dataset_name, "-",
+  # #                                              difficulty_name, "-",
+  # #                                              difficulty_type_name, "-",
+  # #                                              algorithm_name,
+  # #                                              ".html"))),
+  # #   transform = map(plot_distribution)
+  # # ),
   
   data_performance_distribution_paper = detail() %>% 
     filter(dataset == "GLOVE-2M",
+           k == 10,
            difficulty %in% c("middle", "diverse"),
            difficulty_type == "lid") %>%
     collect(),
@@ -686,13 +692,13 @@ plan <- drake_plan(
            width = 8, height=4)
   },
 
-  plot_performance_distribution_rel = {
-    p <- data_performance_distribution_paper %>%
-      filter(algorithm %in% algorithms) %>% 
-      static_ridges_plot_rel()
-    ggsave("imgs/distribution_rel.pdf", plot=p,
-           width = 8, height=4)
-  },
+  # plot_performance_distribution_rel = {
+  #   p <- data_performance_distribution_paper %>%
+  #     filter(algorithm %in% algorithms) %>% 
+  #     static_ridges_plot_rel()
+  #   ggsave("imgs/distribution_rel.pdf", plot=p,
+  #          width = 8, height=4)
+  # },
   
   plot_performance_distribution_qps = data_performance_distribution_paper %>% 
       filter(algorithm %in% algorithms) %>% 
@@ -791,24 +797,39 @@ plan <- drake_plan(
   
   # ----------- Recall vs. difficulty ------------
   
-  correlation_plot_data = bind_rows(
-    detail() %>%
-      filter(difficulty=="diverse", difficulty_type == "lid") %>% 
-      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-      sqlite_cor(recall, lid),
-    detail() %>%
-      filter(difficulty=="diverse", difficulty_type == "lrc") %>% 
-      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-      mutate(lrc = 1/log(lrc)) %>%
-      sqlite_cor(recall, lrc),
-    detail() %>%
-      filter(difficulty=="diverse", difficulty_type == "expansion") %>% 
-      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-      mutate(expansion = 1/log(expansion)) %>%
-      sqlite_cor(recall, expansion)
-  ) %>%
-  group_by(dataset, algorithm, difficulty_type) %>% 
-  summarise(corr = mean(corr, na.rm=T)),
+  correlation_plot_data = {
+    threshold <- 0.5
+
+    correlation_plot_ids <- tbl(conn, "main") %>%
+      filter(k==10) %>%
+      group_by(dataset, algorithm, difficulty_type, difficulty) %>%
+      filter(avg_recall >= if_else(max(avg_recall) < threshold, max(avg_recall), threshold)) %>%
+      slice_max(qps, n=1) %>%
+      ungroup() %>%
+      select(id)
+
+    bind_rows(
+      detail() %>%
+        filter(difficulty=="diverse", difficulty_type == "lid", k==10) %>% 
+        inner_join(correlation_plot_ids) %>%
+        group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+        sqlite_cor(recall, lid),
+      detail() %>%
+        filter(difficulty=="diverse", difficulty_type == "lrc", k==10) %>% 
+        inner_join(correlation_plot_ids) %>%
+        group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+        mutate(lrc = 1/log(lrc)) %>%
+        sqlite_cor(recall, lrc),
+      detail() %>%
+        filter(difficulty=="diverse", difficulty_type == "expansion", k==10) %>% 
+        inner_join(correlation_plot_ids) %>%
+        group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+        mutate(expansion = 1/log(expansion)) %>%
+        sqlite_cor(recall, expansion)
+    )
+    # group_by(dataset, algorithm, difficulty_type) %>% 
+    # summarise(corr = mean(corr, na.rm=T))
+  },
 
   # correlation_lid = detail() %>% 
   #   filter(difficulty_type == "lid") %>% 
@@ -847,6 +868,7 @@ plan <- drake_plan(
                   color=color),
               size=2) + 
     facet_wrap(vars(difficulty_type)) + 
+    # scale_fill_viridis_c(direction=-1) + 
     scale_fill_continuous_diverging() + 
     scale_color_identity()+
     theme_classic() + 
@@ -863,6 +885,7 @@ plan <- drake_plan(
   recall_vs_x_plot_size = 1.7,
   detail_to_plot = detail() %>% 
     filter(dataset == "GLOVE-2M",
+           k == 10,
            parameters == "Annoy(n_trees=100, search_k=200000)",
            difficulty == "diverse"
            ) %>%
