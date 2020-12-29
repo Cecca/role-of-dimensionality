@@ -78,7 +78,8 @@ detail <- function() {
     tbl(conn, "main"),
     tbl(conn, "query_stats"),
     by="id"
-  )
+  ) %>%
+  mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset))
 }
 
 plan <- drake_plan(
@@ -87,10 +88,12 @@ plan <- drake_plan(
   summarized = tbl(conn, "main") %>% 
     filter(k == 10) %>%
     collect() %>%
+    mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset)) %>%
     rename(recall = avg_recall, rel = avg_rel),
 
   summarized_all = tbl(conn, "main") %>% 
     collect() %>%
+    mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset)) %>%
     rename(recall = avg_recall, rel = avg_rel),
 
   summarized_csv = write_csv(summarized_all, file_out("web/data/summarised.csv")),
@@ -830,6 +833,12 @@ plan <- drake_plan(
     # group_by(dataset, algorithm, difficulty_type) %>% 
     # summarise(corr = mean(corr, na.rm=T))
   },
+
+  highest_correlation = correlation_plot_data %>%
+    group_by(dataset, algorithm) %>%
+    slice_max(abs(corr)) %>%
+    ungroup() %>%
+    count(difficulty_type),
 
   # correlation_lid = detail() %>% 
   #   filter(difficulty_type == "lid") %>% 
