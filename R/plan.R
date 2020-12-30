@@ -1012,11 +1012,11 @@ plan <- drake_plan(
 
   plot_k100 = {
     frontier <- data_k100 %>%
-      filter(difficulty_type == "lid", difficulty == "diverse", algorithm == "IVF") %>%
-      group_by(dataset, k) %>%
+      filter(difficulty_type == "lid", algorithm == "IVF") %>%
+      group_by(dataset, difficulty, k) %>%
       psel(high(qps) * high(avg_recall))
     
-    ggplot(frontier, aes(x=avg_recall, y=qps, color=factor(k))) +
+    ggplot(frontier, aes(x=avg_recall, y=qps, color=difficulty, linetype=factor(k))) +
       geom_point(size=0.4) +
       geom_line() +
       #scale_x_continuous(trans=scales::exp_trans()) +

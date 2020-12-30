@@ -20,7 +20,7 @@ scores_plan <- drake_plan(
         if (is.na(str_match(f, "queries"))) {
           k <- as.integer(str_match(f, "lid-(\\d+)")[2])
           if (k %in% c(10, 100)) {
-            cat(paste("parsing ", f, "\n"))
+            cat(paste("parsing ", f, " \n"))
             dataset <- basename(str_match(f, "(.*)-lid")[2])
             part <- read_delim(f, col_names=c("id", "lid"), col_types="id", delim=" ") %>%
               mutate(k = k, dataset=dataset) %>%
@@ -199,7 +199,7 @@ scores_plan <- drake_plan(
   },
 
   plot_lid_distribution = {
-    p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality")
+    p <- plot_score_distribution(lid_scores, lid, k, param_high=100, param_low=10, xlab="Local intrinsic dimensionality", xmax=150)
     save_figure(plot=p, 
                 basename="imgs/density-lid", 
                 tex_width=2.8, tex_height=2.5,
