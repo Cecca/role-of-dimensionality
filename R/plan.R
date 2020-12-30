@@ -813,18 +813,18 @@ plan <- drake_plan(
 
     bind_rows(
       detail() %>%
-        filter(difficulty=="diverse", difficulty_type == "lid", k==10) %>% 
+        filter(difficulty_type == "lid", k==10) %>% 
         inner_join(correlation_plot_ids) %>%
         group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
         sqlite_cor(recall, lid),
       detail() %>%
-        filter(difficulty=="diverse", difficulty_type == "lrc", k==10) %>% 
+        filter(difficulty_type == "lrc", k==10) %>% 
         inner_join(correlation_plot_ids) %>%
         group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
         mutate(lrc = 1/log(lrc)) %>%
         sqlite_cor(recall, lrc),
       detail() %>%
-        filter(difficulty=="diverse", difficulty_type == "expansion", k==10) %>% 
+        filter(difficulty_type == "expansion", k==10) %>% 
         inner_join(correlation_plot_ids) %>%
         group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
         mutate(expansion = 1/log(expansion)) %>%
@@ -835,10 +835,47 @@ plan <- drake_plan(
   },
 
   highest_correlation = correlation_plot_data %>%
-    group_by(dataset, algorithm) %>%
-    slice_max(abs(corr)) %>%
+    mutate(measure = if_else(difficulty_type == "expansion", "exp", difficulty_type)) %>%
+    arrange(dataset, difficulty, algorithm, measure, abs(corr)) %>%
+    group_by(dataset, difficulty, algorithm) %>%
+    slice_max(abs(corr), n=2) %>%
+    mutate(diff = abs(corr - lead(corr))) %>%
+    mutate(
+      label = if_else(diff < 0.05, str_c(measure, lead(measure), sep="/"), measure),
+      label = case_when(
+        (label == "lrc/lid") ~ "lid/lrc",
+        (label == "lrc/exp") ~ "lrc/exp",
+        (label == "lid/lrc") ~ "lid/lrc",
+        (label == "lid/exp") ~ "lid/exp",
+        (label == "exp/lid") ~ "lid/exp",
+        (label == "exp/lrc") ~ "lrc/exp",
+        TRUE ~ label
+      )
+    ) %>%
     ungroup() %>%
-    count(difficulty_type),
+    select(dataset, difficulty, algorithm, measure, corr, diff, label),
+
+  highest_correlation_counts = highest_correlation %>%
+    drop_na() %>%
+    count(difficulty, label) %>%
+    pivot_wider(names_from="difficulty", values_from="n", values_fill=list(n=0)),
+
+  # highest_correlation_wide = highest_correlation %>%
+  #   select(-corr) %>%
+  #   pivot_wider(names_from="algorithm", values_from="difficulty_type") %>%
+  #   select(difficulty, dataset, everything()) %>%
+  #   arrange(difficulty, dataset),
+
+  highest_correlation_plot = {
+    p <- highest_correlation %>%
+      drop_na() %>%
+      ggplot(aes(dataset, algorithm, fill=label, label=label)) + 
+        geom_tile() + 
+        geom_text() + 
+        facet_wrap(vars(difficulty)) +
+        theme(axis.text.x.bottom = element_text(angle=90))
+    ggsave(filename="imgs/highest_correlation.png")
+  },
 
   # correlation_lid = detail() %>% 
   #   filter(difficulty_type == "lid") %>% 
@@ -865,6 +902,7 @@ plan <- drake_plan(
   #   filter(difficulty=="diverse"),
  
   correlation_plot = correlation_plot_data %>% 
+    filter(difficulty == "diverse") %>%
     mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
     ungroup() %>% 
     mutate(difficulty_type = recode_factor(difficulty_type,
@@ -935,5 +973,51 @@ plan <- drake_plan(
     dev.off()
   },
   
+  data_k100 = {
+    k100 <- tbl(conn, "main") %>%
+      filter(k == 100) %>% 
+      collect()
+    # get the corresponding configurations for k == 10
+    k10 <- tbl(conn, "main") %>%
+      filter(k == 10) %>%
+      collect() %>%
+      semi_join(select(k100, algorithm, dataset, difficulty, difficulty_type))
+    bind_rows(k100, k10) %>%
+      mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset))
+  },
+
+  plot_k100 = {
+    frontier <- data_k100 %>%
+      filter(difficulty_type == "lid", difficulty == "diverse", algorithm == "IVF") %>%
+      group_by(dataset, k) %>%
+      psel(high(qps) * high(avg_recall))
+    
+    ggplot(frontier, aes(x=avg_recall, y=qps, color=factor(k))) +
+      geom_point(size=0.4) +
+      geom_line() +
+      #scale_x_continuous(trans=scales::exp_trans()) +
+      scale_x_continuous(breaks=c(0.2, 0.4, 0.6, 0.8, 1.0), limits=c(NA, 1)) +
+      scale_y_log10() +
+      labs(x="Recall",
+           y="QPS",
+           color="k") +
+      facet_wrap(vars(dataset)) +
+      theme_bw()  +
+      theme(legend.position = "top",
+            legend.direction = "horizontal",
+            legend.box = "vertical",
+            legend.box.margin = margin(0,0,0,0),
+            legend.box.spacing = unit(c(0,0,0,0), "mm"),
+            legend.spacing.y = unit(0, "mm"),
+            text = element_text(size = 8),
+            plot.margin = unit(c(0,0,0,0), "cm"))
+  },
+
+  figure_k100 = {
+    tikz(file = here("imgs", "recall-vs-qps-k100.tex"),
+         width = 5.5, height = 2)
+    print(plot_k100)
+    dev.off()
+  },
   
 )
