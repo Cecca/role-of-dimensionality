@@ -82,6 +82,16 @@ detail <- function() {
   mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset))
 }
 
+dataset_n <- tribble(
+  ~dataset, ~n,
+  "SIFT", 1000000,
+  "MNIST", 65000,
+  "Fashion-MNIST", 65000,
+  "GLOVE", 1183514,
+  "GLOVE-2M", 2196018,
+  "GNEWS", 3000000
+)
+
 plan <- drake_plan(
   # ------- Data --------
   # summarized = load_results("summarised.csv.bz2"),
@@ -821,27 +831,38 @@ plan <- drake_plan(
         filter(difficulty_type == "lrc", k==10) %>% 
         inner_join(correlation_plot_ids) %>%
         group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-        mutate(lrc = 1/log(lrc)) %>%
+        inner_join(dataset_n, copy=TRUE) %>%
+        mutate(lrc = log(n/20)/log(lrc)) %>%
         sqlite_cor(recall, lrc),
       detail() %>%
         filter(difficulty_type == "expansion", k==10) %>% 
         inner_join(correlation_plot_ids) %>%
         group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-        mutate(expansion = 1/log(expansion)) %>%
+        mutate(expansion = log(2)/log(expansion)) %>%
         sqlite_cor(recall, expansion)
     )
-    # group_by(dataset, algorithm, difficulty_type) %>% 
-    # summarise(corr = mean(corr, na.rm=T))
   },
 
+  # http://www.unife.it/economia/lm.economics/lectures/applied-econometrics/materiale-didattico-2018-2019/Correlation_overview.pdf
   highest_correlation = correlation_plot_data %>%
+    ungroup() %>%
     mutate(measure = if_else(difficulty_type == "expansion", "exp", difficulty_type)) %>%
+    mutate(
+      significance_level = 0.01 / n()
+    ) %>%
     arrange(dataset, difficulty, algorithm, measure, abs(corr)) %>%
     group_by(dataset, difficulty, algorithm) %>%
     slice_max(abs(corr), n=2) %>%
-    mutate(diff = abs(corr - lead(corr))) %>%
     mutate(
-      label = if_else(diff < 0.05, str_c(measure, lead(measure), sep="/"), measure),
+      diff = abs(corr - lead(corr)),
+      zdiff = zcorr - lead(zcorr),
+      # The standard error of the difference
+      diff_se = sqrt((1/(sample_size - 3)) + 1/(lead(sample_size) - 3)),
+      p = pnorm(zdiff / diff_se)
+    ) %>%
+    mutate(
+      # label = if_else(diff < 0.05, str_c(measure, lead(measure), sep="/"), measure),
+      label = if_else(p < significance_level, measure, str_c(measure, lead(measure), sep="/")),
       label = case_when(
         (label == "lrc/lid") ~ "lid/lrc",
         (label == "lrc/exp") ~ "lrc/exp",
@@ -853,7 +874,7 @@ plan <- drake_plan(
       )
     ) %>%
     ungroup() %>%
-    select(dataset, difficulty, algorithm, measure, corr, diff, label),
+    select(dataset, difficulty, algorithm, measure, corr, diff, p, label, significance_level),
 
   highest_correlation_counts = highest_correlation %>%
     drop_na() %>%
@@ -907,8 +928,8 @@ plan <- drake_plan(
     ungroup() %>% 
     mutate(difficulty_type = recode_factor(difficulty_type,
                                            "lid" = "LID",
-                                           "expansion" = "1/log(Expansion)",
-                                           "lrc" = "1/log(RC)")) %>% 
+                                           "expansion" = "Expansion dimension",
+                                           "lrc" = "RC dimension")) %>% 
     ggplot(aes(dataset, algorithm, fill=corr)) +
     geom_tile() + 
     geom_text(aes(label=scales::number(corr,accuracy=.01),
@@ -956,7 +977,7 @@ plan <- drake_plan(
     p <- detail_to_plot %>% 
       filter(difficulty_type == "expansion") %>% 
       # filter(expansion <= 1.1) %>% 
-      mutate(expansion = 1/log(expansion)) %>%
+      mutate(expansion = log(2)/log(expansion)) %>%
       do_plot_recall_vs_expansion_single()
     print(p)
     dev.off()
@@ -967,7 +988,10 @@ plan <- drake_plan(
          width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
     p <- detail_to_plot %>% 
       filter(difficulty_type == "lrc") %>% 
-      mutate(lrc = 1/log(lrc)) %>%
+      inner_join(dataset_n) %>%
+      mutate(
+        lrc = log(n/20)/log(lrc)
+      ) %>%
       do_plot_recall_vs_lrc_single()
     print(p)
     dev.off()

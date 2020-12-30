@@ -1016,7 +1016,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
                        limits = expansion_range) +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    labs(x="1/log(expansion)") +
+    labs(x="Expansion dimension") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1061,7 +1061,7 @@ do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
     scale_size_area() +
     #scale_x_log10() +
     coord_cartesian(ylim = c(0,1)) +
-    labs(x="1/log(lrc)") +
+    labs(x="RC dimension") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1624,10 +1624,10 @@ save_figure <- function(plot, basename, tex_width, tex_height, png_width, png_he
          width=png_width, height=png_height, dpi=300)
 }
 
+
+
 # Compute the Pearson correlation between the two given columns without loading
 # into a dataframe all the data, letting the database handle most of the operations
-#
-# Confidence interval specification is built according to http://faculty.washington.edu/gloftus/P317-318/Useful_Information/r_to_z/PearsonrCIs.pdf
 sqlite_cor <- function(data, X, Y) {
   data %>%
     mutate(
@@ -1640,13 +1640,13 @@ sqlite_cor <- function(data, X, Y) {
       mY = mean({{Y}}, na.rm=T),
       mY2 = mean({{Y}} * {{Y}}, na.rm=T),
       mDiffXY = mean(diffX*diffY, na.rm=T),
-      n = n()
+      sample_size = n()
     ) %>%
     collect() %>%
     mutate(
       corr = mDiffXY / (sqrt(mX2 - mX^2) * sqrt(mY2 - mY^2)),
-      # confint_low = psychometric::CIr(corr, n, level=0.95)[1],
-      # confint_high = psychometric::CIr(corr, n, level=0.95)[2]
+      # Transform the correlation with Fisher's transformation
+      zcorr = 1/2 * log((1+corr)/(1-corr))
     ) %>%
     select(-mX, -mX2, -mY, -mY2, -mDiffXY)
 }
