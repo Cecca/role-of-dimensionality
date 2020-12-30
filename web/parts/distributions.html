@@ -1,0 +1,35 @@
+<div class="mt-10 grid grid-cols-6 gap-10">
+    <div class="col-span-4" id="viz-container"></div>
+    <article class="col-span-2 text-justify">
+        <h1 class="text-4xl text-gray-800 text-right">Performance distribution of individual queries</h1>
+        <p class="mt-10">
+            This plot reports, as dots, the average performance in terms
+            of queries per second against recall of several configruations
+            of all the algorithms we testes, on all datasets.
+        </p>
+        <p class="mt-5">
+            The selection boxes allow to configure the combination of dataset, difficulty
+            and algorithm.
+        </p>
+        <p class="mt-5">
+            Since the average performance obtained by each configuration of an algorithm
+            is the result of several queries, we report, above and to the side of the plot,
+            the distribution of the recall and query per seconds metrics for each individual query.
+        </p>
+        <p class="mt-5">
+            In some cases, we can observe a sort of bimodal behaviour: the average performance in
+            terms of recall of some algorithms is given by a fraction of the queries having recall 0,
+            while all the others have recall 1.
+        </p>
+        <p class="mt-5">
+            The running times, instead, are very concentrated around the average
+        </p>
+        <p class="mt-5 p-5 rounded-xl bg-gray-300 text-sm text-gray-900">
+            Hovering with the mouse on a dot will stop the animation, focusing the
+            visualization on that dot.
+            Changing the configuration of the selectors will resume the animation
+        </p>
+    </article>
+</div>
+
+<script src="distributions.js"></script>

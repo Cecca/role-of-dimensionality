@@ -116,14 +116,6 @@ if __name__ == "__main__":
     parser.add_argument(
         '--output',
         help='Path to the output csv file')
-    parser.add_argument(
-        '--recompute',
-        action='store_true',
-        help='Path to the output csv file')
-    parser.add_argument(
-        '--detail',
-        action='store_true',
-        help='Output the detailed information about each single query')
     args = parser.parse_args()
 
     count = int(args.count)
@@ -132,6 +124,7 @@ if __name__ == "__main__":
     dbconn.execute(
         """CREATE TABLE IF NOT EXISTS main (
             id INTEGER PRIMARY KEY, 
+            k INTEGER NOT NULL,
             dataset TEXT NOT NULL, 
             algorithm TEXT NOT NULL, 
             parameters TEXT NOT NULL, 
@@ -139,8 +132,13 @@ if __name__ == "__main__":
             difficulty TEXT NOT NULL,
             qps REAL NOT NULL,
             avg_recall REAL NOT NULL,
+            avg_epsilon_recall REAL NOT NULL,
+            avg_largeepsilon_recall REAL NOT NULL,
             avg_rel REAL NOT NULL,
-            distcomps INTEGER NOT NULL
+            distcomps INTEGER NOT NULL,
+            build_time REAL NOT NULL,
+            index_size INTEGER NOT NULL,
+            queriessize REAL NOT NULL
         )
         """)
     dbconn.execute(

@@ -508,6 +508,68 @@ do_scatter_distribution_lrc_exp <- function(data) {
 }
 
 
+static_ridges_plot_rel <- function(algo_data) {
+  averages <- algo_data %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
+    summarise(avg_time = mean(query_time), avg_rel=mean(rel)) %>%
+    mutate(qps = 1/avg_time) %>% 
+    mutate(parameters = fct_reorder(parameters, avg_rel)) %>% 
+    psel(high(qps) * low(avg_rel))
+  
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_rel), averages) %>%
+    filter(rel > 1)
+  
+  ggplot(all_points, aes(x=rel, y=qps, group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=25,
+                        size=0.1, show.legend = F) +
+    geom_point(data=averages, 
+               mapping=aes(x=avg_rel), 
+               size=0.3,
+               show.legend = F) +
+    scale_y_log10() +
+    scale_x_continuous(trans=scales::log2_trans(),
+                       limits=c(1,10)) +
+    facet_grid(vars(difficulty), vars(algorithm)) +
+    labs(y="QPS (1/s)", 
+         x="Relative error") +
+    theme_bw()
+}
+  
+static_ridges_plot_qps <- function(algo_data) {
+  dataset <- algo_data %>% distinct(dataset) %>% pull()
+  difficulty <- algo_data %>% distinct(difficulty) %>% pull()
+  difficulty_type <- algo_data %>% distinct(difficulty_type) %>% pull()
+  averages <- algo_data %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
+    summarise(avg_time = mean(query_time), avg_recall=mean(recall)) %>%
+    mutate(qps = 1/avg_time) %>% 
+    mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
+    psel(high(qps) * high(avg_recall))
+  
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
+  print(count(all_points, algorithm, difficulty, avg_recall) %>% 
+          filter(algorithm == "IVF") %>% 
+          arrange(desc(avg_recall)))
+  
+  ggplot(all_points, aes(x=1/query_time, 
+                         y=avg_recall,
+                         group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=15,
+                        size=0.1, show.legend = F) +
+    geom_point(data=averages, 
+               mapping=aes(x=qps), 
+               size=0.3,
+               show.legend = F) +
+    scale_x_log10() + 
+    scale_y_continuous(labels=c("0", "0.3", "0.6", "0.9", "")) +
+    facet_grid(vars(difficulty), vars(algorithm), scales="free_x") +
+    labs(x="QPS (1/s)", 
+         y="recall") +
+    theme_bw()
+  
+}
+
+
 static_ridges_plot_recall <- function(algo_data) {
   averages <- algo_data %>%
     group_by(algorithm, dataset, difficulty, parameters) %>%
@@ -954,7 +1016,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
                        limits = expansion_range) +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    labs(x="1/log(expansion)") +
+    labs(x="Expansion dimension") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -999,7 +1061,7 @@ do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
     scale_size_area() +
     #scale_x_log10() +
     coord_cartesian(ylim = c(0,1)) +
-    labs(x="1/log(lrc)") +
+    labs(x="RC dimension") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1562,6 +1624,8 @@ save_figure <- function(plot, basename, tex_width, tex_height, png_width, png_he
          width=png_width, height=png_height, dpi=300)
 }
 
+
+
 # Compute the Pearson correlation between the two given columns without loading
 # into a dataframe all the data, letting the database handle most of the operations
 sqlite_cor <- function(data, X, Y) {
@@ -1575,10 +1639,14 @@ sqlite_cor <- function(data, X, Y) {
       mX2 = mean({{X}} * {{X}}, na.rm=T),
       mY = mean({{Y}}, na.rm=T),
       mY2 = mean({{Y}} * {{Y}}, na.rm=T),
-      mDiffXY = mean(diffX*diffY, na.rm=T)
+      mDiffXY = mean(diffX*diffY, na.rm=T),
+      sample_size = n()
     ) %>%
     collect() %>%
-    transmute(
-      corr = mDiffXY / (sqrt(mX2 - mX^2) * sqrt(mY2 - mY^2))
-    )
+    mutate(
+      corr = mDiffXY / (sqrt(mX2 - mX^2) * sqrt(mY2 - mY^2)),
+      # Transform the correlation with Fisher's transformation
+      zcorr = 1/2 * log((1+corr)/(1-corr))
+    ) %>%
+    select(-mX, -mX2, -mY, -mY2, -mDiffXY)
 }

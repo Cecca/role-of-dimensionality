@@ -69,6 +69,8 @@ algorithms <- list(
   "Annoy"
 )
 
+kValues <- list(10, 100)
+
 conn <- DBI::dbConnect(RSQLite::SQLite(), "export.db")
 
 detail <- function() {
@@ -76,15 +78,35 @@ detail <- function() {
     tbl(conn, "main"),
     tbl(conn, "query_stats"),
     by="id"
-  )
+  ) %>%
+  mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset))
 }
+
+dataset_n <- tribble(
+  ~dataset, ~n,
+  "SIFT", 1000000,
+  "MNIST", 65000,
+  "Fashion-MNIST", 65000,
+  "GLOVE", 1183514,
+  "GLOVE-2M", 2196018,
+  "GNEWS", 3000000
+)
 
 plan <- drake_plan(
   # ------- Data --------
   # summarized = load_results("summarised.csv.bz2"),
   summarized = tbl(conn, "main") %>% 
+    filter(k == 10) %>%
     collect() %>%
+    mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset)) %>%
     rename(recall = avg_recall, rel = avg_rel),
+
+  summarized_all = tbl(conn, "main") %>% 
+    collect() %>%
+    mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset)) %>%
+    rename(recall = avg_recall, rel = avg_rel),
+
+  summarized_csv = write_csv(summarized_all, file_out("web/data/summarised.csv")),
   
   # detail = target(
   #   read_parquet("detail.parquet"),
@@ -593,43 +615,84 @@ plan <- drake_plan(
   
   # ------- Performance distribution scores ------------
 
-  # perf_distribution_json = {
-  # detail() %>% 
-  #     distinct(dataset, difficulty, difficulty_type, algorithm, parameters) %>%
-
+  # perf_distribution_part = {
+  #   # algorithms <- c("Annoy")
+  #   # datasets <- c("GLOVE")
+  #   # difficulties <- c("hard")
+  #   cat(str_wrap("We will now compute distributions for several configurations of all
+  #                 combinations of algorithms/datasets. This will take a long time.
+  #                 Index the database to speed this up.\n"))
+  #   types <- c("lid", "expansion", "lrc")
+  #   n <- length(algorithms) * length(datasets) * length(difficulties) * length(types) * length(kValues)
+  #   i <- 1
+  #   for(algorithm_name in algorithms) {
+  #     for(dataset_name in datasets) {
+  #       for(difficulty_name in difficulties) {
+  #         for(difficulty_type_name in types) {
+  #           for(kValue in kValues) {
+  #             cat(paste0(i, "/", n, "\n"))
+  #             i <- i + 1
+  #             part <- detail() %>%
+  #               filter(algorithm == algorithm_name,
+  #                     dataset == dataset_name,
+  #                     difficulty == difficulty_name,
+  #                     difficulty_type == difficulty_type_name,
+  #                     k == kValue) %>% 
+  #               collect()
+  #             if (nrow(part) > 0) {
+  #               part %>%
+  #                 group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
+  #                 summarise(
+  #                   # recall_histogram = list(tibble(recall=recall) %>% count(recall)),
+  #                   recall_distribution = list(broom::tidy(density(recall, cut=0))),
+  #                   qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
+  #                   recall = mean(recall),
+  #                   qps = 1/mean(query_time)
+  #                 ) %>%
+  #                 arrange(recall) %>%
+  #                 psel(high(qps) * high(recall)) %>%
+  #                 mutate(id = row_number()) %>%
+  #                 jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, kValue, "json", sep=".")))
+  #             }
+  #           }
+  #         }
+  #       }
+  #     }
+  #   }
   # },
   
-  # TODO: this would be better replaced with a plot built with React/D3
-  # plot_distribution = target({
-  #   plot_data <- detail() %>%
-  #     filter(algorithm == algorithm_name,
-  #            dataset == dataset_name,
-  #            difficulty == difficulty_name,
-  #            difficulty_type == difficulty_type_name) %>% 
-  #     collect()
-  #   interactive_distribution_plot(plot_data)
-  #   },
-  #   transform = cross(
-  #     algorithm_name = !!algorithms,
-  #     dataset_name = !!datasets,
-  #     difficulty_name = !!difficulties,
-  #     difficulty_type_name = c("expansion", "lid")
-  #   )
-  # ),
-  #
-  # figure_distribution = target(
-  #   htmlwidgets::saveWidget(plot_distribution,
-  #                           here("imgs", str_c("perf-distribution-",
-  #                                              dataset_name, "-",
-  #                                              difficulty_name, "-",
-  #                                              difficulty_type_name, "-",
-  #                                              algorithm_name,
-  #                                              ".html"))),
-  #   transform = map(plot_distribution)
-  # ),
+  # # TODO: this would be better replaced with a plot built with React/D3
+  # # plot_distribution = target({
+  # #   plot_data <- detail() %>%
+  # #     filter(algorithm == algorithm_name,
+  # #            dataset == dataset_name,
+  # #            difficulty == difficulty_name,
+  # #            difficulty_type == difficulty_type_name) %>% 
+  # #     collect()
+  # #   interactive_distribution_plot(plot_data)
+  # #   },
+  # #   transform = cross(
+  # #     algorithm_name = !!algorithms,
+  # #     dataset_name = !!datasets,
+  # #     difficulty_name = !!difficulties,
+  # #     difficulty_type_name = c("expansion", "lid")
+  # #   )
+  # # ),
+  # #
+  # # figure_distribution = target(
+  # #   htmlwidgets::saveWidget(plot_distribution,
+  # #                           here("imgs", str_c("perf-distribution-",
+  # #                                              dataset_name, "-",
+  # #                                              difficulty_name, "-",
+  # #                                              difficulty_type_name, "-",
+  # #                                              algorithm_name,
+  # #                                              ".html"))),
+  # #   transform = map(plot_distribution)
+  # # ),
   
   data_performance_distribution_paper = detail() %>% 
     filter(dataset == "GLOVE-2M",
+           k == 10,
            difficulty %in% c("middle", "diverse"),
            difficulty_type == "lid") %>%
     collect(),
@@ -641,6 +704,14 @@ plan <- drake_plan(
     ggsave("imgs/distribution_recall.pdf", plot=p,
            width = 8, height=4)
   },
+
+  # plot_performance_distribution_rel = {
+  #   p <- data_performance_distribution_paper %>%
+  #     filter(algorithm %in% algorithms) %>% 
+  #     static_ridges_plot_rel()
+  #   ggsave("imgs/distribution_rel.pdf", plot=p,
+  #          width = 8, height=4)
+  # },
   
   plot_performance_distribution_qps = data_performance_distribution_paper %>% 
       filter(algorithm %in% algorithms) %>% 
@@ -739,24 +810,93 @@ plan <- drake_plan(
   
   # ----------- Recall vs. difficulty ------------
   
-  correlation_plot_data = bind_rows(
-    detail() %>%
-      filter(difficulty=="diverse", difficulty_type == "lid") %>% 
-      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-      sqlite_cor(recall, lid),
-    detail() %>%
-      filter(difficulty=="diverse", difficulty_type == "lrc") %>% 
-      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-      mutate(lrc = 1/log(lrc)) %>%
-      sqlite_cor(recall, lrc),
-    detail() %>%
-      filter(difficulty=="diverse", difficulty_type == "expansion") %>% 
-      group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
-      mutate(expansion = 1/log(expansion)) %>%
-      sqlite_cor(recall, expansion)
-  ) %>%
-  group_by(dataset, algorithm, difficulty_type) %>% 
-  summarise(corr = mean(corr, na.rm=T)),
+  correlation_plot_data = {
+    threshold <- 0.5
+
+    correlation_plot_ids <- tbl(conn, "main") %>%
+      filter(k==10) %>%
+      group_by(dataset, algorithm, difficulty_type, difficulty) %>%
+      filter(avg_recall >= if_else(max(avg_recall) < threshold, max(avg_recall), threshold)) %>%
+      slice_max(qps, n=1) %>%
+      ungroup() %>%
+      select(id)
+
+    bind_rows(
+      detail() %>%
+        filter(difficulty_type == "lid", k==10) %>% 
+        inner_join(correlation_plot_ids) %>%
+        group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+        sqlite_cor(recall, lid),
+      detail() %>%
+        filter(difficulty_type == "lrc", k==10) %>% 
+        inner_join(correlation_plot_ids) %>%
+        group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+        inner_join(dataset_n, copy=TRUE) %>%
+        mutate(lrc = log(n/20)/log(lrc)) %>%
+        sqlite_cor(recall, lrc),
+      detail() %>%
+        filter(difficulty_type == "expansion", k==10) %>% 
+        inner_join(correlation_plot_ids) %>%
+        group_by(dataset, algorithm, parameters, difficulty_type, difficulty) %>% 
+        mutate(expansion = log(2)/log(expansion)) %>%
+        sqlite_cor(recall, expansion)
+    )
+  },
+
+  # http://www.unife.it/economia/lm.economics/lectures/applied-econometrics/materiale-didattico-2018-2019/Correlation_overview.pdf
+  highest_correlation = correlation_plot_data %>%
+    ungroup() %>%
+    mutate(measure = if_else(difficulty_type == "expansion", "exp", difficulty_type)) %>%
+    mutate(
+      significance_level = 0.01 / n()
+    ) %>%
+    arrange(dataset, difficulty, algorithm, measure, abs(corr)) %>%
+    group_by(dataset, difficulty, algorithm) %>%
+    slice_max(abs(corr), n=2) %>%
+    mutate(
+      diff = abs(corr - lead(corr)),
+      zdiff = zcorr - lead(zcorr),
+      # The standard error of the difference
+      diff_se = sqrt((1/(sample_size - 3)) + 1/(lead(sample_size) - 3)),
+      p = pnorm(zdiff / diff_se)
+    ) %>%
+    mutate(
+      # label = if_else(diff < 0.05, str_c(measure, lead(measure), sep="/"), measure),
+      label = if_else(p < significance_level, measure, str_c(measure, lead(measure), sep="/")),
+      label = case_when(
+        (label == "lrc/lid") ~ "lid/lrc",
+        (label == "lrc/exp") ~ "lrc/exp",
+        (label == "lid/lrc") ~ "lid/lrc",
+        (label == "lid/exp") ~ "lid/exp",
+        (label == "exp/lid") ~ "lid/exp",
+        (label == "exp/lrc") ~ "lrc/exp",
+        TRUE ~ label
+      )
+    ) %>%
+    ungroup() %>%
+    select(dataset, difficulty, algorithm, measure, corr, diff, p, label, significance_level),
+
+  highest_correlation_counts = highest_correlation %>%
+    drop_na() %>%
+    count(difficulty, label) %>%
+    pivot_wider(names_from="difficulty", values_from="n", values_fill=list(n=0)),
+
+  # highest_correlation_wide = highest_correlation %>%
+  #   select(-corr) %>%
+  #   pivot_wider(names_from="algorithm", values_from="difficulty_type") %>%
+  #   select(difficulty, dataset, everything()) %>%
+  #   arrange(difficulty, dataset),
+
+  highest_correlation_plot = {
+    p <- highest_correlation %>%
+      drop_na() %>%
+      ggplot(aes(dataset, algorithm, fill=label, label=label)) + 
+        geom_tile() + 
+        geom_text() + 
+        facet_wrap(vars(difficulty)) +
+        theme(axis.text.x.bottom = element_text(angle=90))
+    ggsave(filename="imgs/highest_correlation.png")
+  },
 
   # correlation_lid = detail() %>% 
   #   filter(difficulty_type == "lid") %>% 
@@ -783,18 +923,20 @@ plan <- drake_plan(
   #   filter(difficulty=="diverse"),
  
   correlation_plot = correlation_plot_data %>% 
+    filter(difficulty == "diverse") %>%
     mutate(color=if_else(corr < -0.7, "white", "black")) %>% 
     ungroup() %>% 
     mutate(difficulty_type = recode_factor(difficulty_type,
                                            "lid" = "LID",
-                                           "expansion" = "1/log(Expansion)",
-                                           "lrc" = "1/log(RC)")) %>% 
+                                           "expansion" = "Expansion dimension",
+                                           "lrc" = "RC dimension")) %>% 
     ggplot(aes(dataset, algorithm, fill=corr)) +
     geom_tile() + 
     geom_text(aes(label=scales::number(corr,accuracy=.01),
                   color=color),
               size=2) + 
     facet_wrap(vars(difficulty_type)) + 
+    # scale_fill_viridis_c(direction=-1) + 
     scale_fill_continuous_diverging() + 
     scale_color_identity()+
     theme_classic() + 
@@ -811,6 +953,7 @@ plan <- drake_plan(
   recall_vs_x_plot_size = 1.7,
   detail_to_plot = detail() %>% 
     filter(dataset == "GLOVE-2M",
+           k == 10,
            parameters == "Annoy(n_trees=100, search_k=200000)",
            difficulty == "diverse"
            ) %>%
@@ -834,7 +977,7 @@ plan <- drake_plan(
     p <- detail_to_plot %>% 
       filter(difficulty_type == "expansion") %>% 
       # filter(expansion <= 1.1) %>% 
-      mutate(expansion = 1/log(expansion)) %>%
+      mutate(expansion = log(2)/log(expansion)) %>%
       do_plot_recall_vs_expansion_single()
     print(p)
     dev.off()
@@ -845,11 +988,60 @@ plan <- drake_plan(
          width = recall_vs_x_plot_size, height = recall_vs_x_plot_size)
     p <- detail_to_plot %>% 
       filter(difficulty_type == "lrc") %>% 
-      mutate(lrc = 1/log(lrc)) %>%
+      inner_join(dataset_n) %>%
+      mutate(
+        lrc = log(n/20)/log(lrc)
+      ) %>%
       do_plot_recall_vs_lrc_single()
     print(p)
     dev.off()
   },
   
+  data_k100 = {
+    k100 <- tbl(conn, "main") %>%
+      filter(k == 100) %>% 
+      collect()
+    # get the corresponding configurations for k == 10
+    k10 <- tbl(conn, "main") %>%
+      filter(k == 10) %>%
+      collect() %>%
+      semi_join(select(k100, algorithm, dataset, difficulty, difficulty_type))
+    bind_rows(k100, k10) %>%
+      mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset))
+  },
+
+  plot_k100 = {
+    frontier <- data_k100 %>%
+      filter(difficulty_type == "lid", difficulty == "diverse", algorithm == "IVF") %>%
+      group_by(dataset, k) %>%
+      psel(high(qps) * high(avg_recall))
+    
+    ggplot(frontier, aes(x=avg_recall, y=qps, color=factor(k))) +
+      geom_point(size=0.4) +
+      geom_line() +
+      #scale_x_continuous(trans=scales::exp_trans()) +
+      scale_x_continuous(breaks=c(0.2, 0.4, 0.6, 0.8, 1.0), limits=c(NA, 1)) +
+      scale_y_log10() +
+      labs(x="Recall",
+           y="QPS",
+           color="k") +
+      facet_wrap(vars(dataset)) +
+      theme_bw()  +
+      theme(legend.position = "top",
+            legend.direction = "horizontal",
+            legend.box = "vertical",
+            legend.box.margin = margin(0,0,0,0),
+            legend.box.spacing = unit(c(0,0,0,0), "mm"),
+            legend.spacing.y = unit(0, "mm"),
+            text = element_text(size = 8),
+            plot.margin = unit(c(0,0,0,0), "cm"))
+  },
+
+  figure_k100 = {
+    tikz(file = here("imgs", "recall-vs-qps-k100.tex"),
+         width = 5.5, height = 2)
+    print(plot_k100)
+    dev.off()
+  },
   
 )

@@ -18,13 +18,15 @@ scores_plan <- drake_plan(
       lids <- c()
       for (f in lid_files) {
         if (is.na(str_match(f, "queries"))) {
-          print(paste("parsing ", f))
           k <- as.integer(str_match(f, "lid-(\\d+)")[2])
-          dataset <- basename(str_match(f, "(.*)-lid")[2])
-          part <- read_delim(f, col_names=c("id", "lid"), col_types="id", delim=" ") %>%
-            mutate(k = k, dataset=dataset) %>%
-            drop_na()
-          lids <- c(lids, list(part))
+          if (k %in% c(10, 100)) {
+            cat(paste("parsing ", f, "\n"))
+            dataset <- basename(str_match(f, "(.*)-lid")[2])
+            part <- read_delim(f, col_names=c("id", "lid"), col_types="id", delim=" ") %>%
+              mutate(k = k, dataset=dataset) %>%
+              drop_na()
+            lids <- c(lids, list(part))
+          }
         }
       }
       bind_rows(lids) %>% 
@@ -39,18 +41,29 @@ scores_plan <- drake_plan(
       rcs <- c()
       for (f in rc_files) {
         if (is.na(str_match(f, "queries"))) {
-          print(paste("parsing ", f))
           k <- str_match(f, "rc-(\\d+)")[2]
-          dataset <- basename(str_match(f, "(.*)-rc")[2])
-          part <- read_delim(f, col_names=c("id", "rc"), col_types="id", delim=" ") %>%
-            mutate(k = k, dataset=dataset) %>%
-            drop_na()
-          rcs <- c(rcs, list(part))
+          if (k %in% c(10, 100)) {
+            cat(paste("parsing ", f, "\n"))
+            dataset <- basename(str_match(f, "(.*)-rc")[2])
+            part <- read_delim(f, col_names=c("id", "rc"), col_types="id", delim=" ") %>%
+              mutate(k = k, dataset=dataset) %>%
+              drop_na()
+            rcs <- c(rcs, list(part))
+          }
         }
       }
       bind_rows(rcs) %>% 
-        mutate(logrc = 1/log(rc)) %>%
+        group_by(dataset, k) %>%
+        mutate(
+          rescaling = case_when(
+            k == 10 ~ log(n()/20),
+            k == 100 ~ log(n()/200)
+          ),
+          logrc = rescaling/log(rc)
+        ) %>%
+        select(-rescaling) %>%
         recode_datasets() %>%
+        ungroup() %>%
         as.data.table()
     },
     format = "fst_dt"
@@ -61,19 +74,28 @@ scores_plan <- drake_plan(
       expansions <- c()
       for (f in expansion_files) {
         if (is.na(str_match(f, "queries"))) {
-          print(paste("parsing ", f))
           k <- str_replace(str_match(f, "expansion-(\\d+_\\d+)")[2], "_", "/")
-          dataset <- basename(str_match(f, "(.*)-expansion")[2])
-          part <- read_delim(f, col_names=c("id", "expansion"), 
-                            col_types="id", 
-                            delim=" ") %>%
-            mutate(k = k, dataset=dataset) %>%
-            drop_na()
-          expansions <- c(expansions, list(part))
+          if (k %in% c("10/20", "5/100")) {
+            cat(paste("parsing ", f, "\n"))
+            dataset <- basename(str_match(f, "(.*)-expansion")[2])
+            part <- read_delim(f, col_names=c("id", "expansion"), 
+                              col_types="id", 
+                              delim=" ") %>%
+              mutate(k = k, dataset=dataset) %>%
+              drop_na()
+            expansions <- c(expansions, list(part))
+          }
         }
       }
       bind_rows(expansions) %>%
-        mutate(logexp = 1/log(expansion)) %>%
+        mutate(
+          rescaling = case_when(
+            k == "10/20" ~ log(2),
+            k == "5/100" ~ log(20)
+          ),
+          logexp = rescaling/log(expansion)
+        ) %>%
+        select(-rescaling) %>%
         recode_datasets() %>%
         as.data.table()
     },
@@ -184,14 +206,14 @@ scores_plan <- drake_plan(
                 png_width=5, png_height=3)
   },  
   plot_rc_distribution = {
-    p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="1/log(Relative contrast)", reverse=FALSE)
+    p <- plot_score_distribution(rc_scores, logrc, k, param_high=100, param_low=10, xlab="Relative contrast dimension", reverse=FALSE)
     save_figure(plot=p, 
                 basename="imgs/density-rc", 
                 tex_width=2.8, tex_height=2.5,
                 png_width=5, png_height=3)
   },  
   plot_exp_distribution = {
-    p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/20", param_low="5/100", xlab="1/log(Expansion)", xmax=200)
+    p <- plot_score_distribution(expansion_scores, logexp, k, param_high="10/20", param_low="5/100", xlab="Expansion dimension", xmax=200)
     save_figure(plot=p, 
                 basename="imgs/density-expansion", 
                 tex_width=2.8, tex_height=2.5,
@@ -209,21 +231,21 @@ scores_plan <- drake_plan(
   sample_n(10000),
 
   plot_scores_lid_exp = {
-    p <- do_scatter_distribution(data_scores_paper, lid, logexp, "LID", "1/log(Exp)")
+    p <- do_scatter_distribution(data_scores_paper, lid, logexp, "LID", "Expansion dimension")
     ggsave(filename = here("imgs","GLOVE-scores-lid-exp.png"),
            plot = p,
            width=8, height=8,
            units = "cm")
   },
   plot_scores_lid_rc = {
-    p <- do_scatter_distribution(data_scores_paper, lid, logrc, "LID", "1/log(RC)")
+    p <- do_scatter_distribution(data_scores_paper, lid, logrc, "LID", "RC dimension")
     ggsave(filename = here("imgs","GLOVE-scores-lid-lrc.png"),
            plot = p,
            width=8, height=8,
            units = "cm")
   },
   plot_scores_rc_exp = {
-    p <- do_scatter_distribution(data_scores_paper, logrc, logexp, "1/log(RC)", "1/log(Exp)")
+    p <- do_scatter_distribution(data_scores_paper, logrc, logexp, "RC dimension", "Expansion dimension")
     ggsave(filename = here("imgs","GLOVE-scores-lrc-exp.png"),
            plot = p,
            width=8, height=8,
