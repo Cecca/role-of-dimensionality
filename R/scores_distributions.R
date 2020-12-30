@@ -132,50 +132,6 @@ scores_plan <- drake_plan(
                rank20 = row_number(desc(`10/20`)))
     },
 
-  plot_lid_displacement = {
-    p <- plot_displacements2(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
-    save_figure(plot=p, 
-                basename="imgs/lid_displacement", 
-                tex_width=11.2, tex_height=2.8,
-                png_width=8, png_height=5)
-  },
-  plot_rc_displacement = {
-    p <- plot_displacements2(rc_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
-    save_figure(plot=p, 
-                basename="imgs/rc_displacement", 
-                tex_width=11.2, tex_height=2.8,
-                png_width=8, png_height=5)
-  },
-  plot_expansion_displacement = {
-    p <- plot_displacements2(expansion_displacement, rank_accurate=rank100, rank_less_accurate=rank20)
-    save_figure(plot=p, 
-                basename="imgs/expansion_displacement", 
-                tex_width=11.2, tex_height=2.8,
-                png_width=8, png_height=5)
-  },
-
-  plot_lid_heatmap = {
-    p <- plot_heatmap(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
-    save_figure(plot=p, 
-                basename="imgs/lidHeatmap", 
-                tex_width=5, tex_height=2.8,
-                png_width=8, png_height=5)
-  },
-  plot_rc_heatmap = {
-    p <- plot_heatmap(rc_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
-    save_figure(plot=p, 
-                basename="imgs/rcHeatmap", 
-                tex_width=5, tex_height=2.8,
-                png_width=8, png_height=5)
-  },
-  plot_expansion_heatmap = {
-    p <- plot_heatmap(expansion_displacement, rank_accurate=rank100, rank_less_accurate=rank20)
-    save_figure(plot=p, 
-                basename="imgs/expansionHeatmap", 
-                tex_width=5, tex_height=2.8,
-                png_width=8, png_height=5)
-  },
-
   plot_lid_ridges = {
     p <- plot_displacement_ridges(lid_displacement, rank_accurate=rank100, rank_less_accurate=rank10)
     save_figure(plot=p, 
