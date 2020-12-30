@@ -11,13 +11,14 @@ k = 100
 if len(sys.argv) == 3:
     k = int(sys.argv[2])
 
+print("Using k=", k, file=sys.stderr)
 distances = numpy.array(f['distances'])
 
 estimates = []
 
 for i, vec in enumerate(distances):
     vec.sort()
-    w = vec[-1]
+    w = vec[min(len(vec) - 1, k)]
     half_w = 0.5 * w
     s = 0.0
     valid = 0
@@ -33,8 +34,8 @@ for i, vec in enumerate(distances):
 for i,e in enumerate(estimates):
     print(i, e)
 #print(estimates)
-avg_estimate = sum(estimates) / len(estimates)
-print(sys.argv[1], avg_estimate)
+# avg_estimate = sum(estimates) / len(estimates)
+# print(sys.argv[1], avg_estimate)
 
 
 
