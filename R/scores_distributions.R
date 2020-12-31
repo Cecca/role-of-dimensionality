@@ -12,6 +12,16 @@ lid_files <- Sys.glob(here("workloads/*-lid-*"))
 expansion_files <- Sys.glob(here("workloads/*-expansion-*"))
 rc_files <- Sys.glob(here("workloads/*-rc-*"))
 
+dataset_info <- tribble(
+  ~dataset, ~n, ~dim, ~metric,
+  "SIFT", 1000000, 128, "Euclidean",
+  "MNIST", 65000, 784,"Euclidean",
+  "Fashion-MNIST", 65000, 784,"Euclidean",
+  "GLOVE", 1183514, 100,"Cosine",
+  "GLOVE-2M", 2196018, 300,"Cosine",
+  "GNEWS", 3000000, 300,"Cosine",
+)
+
 scores_plan <- drake_plan(
   lid_scores = target(
     {
@@ -224,6 +234,30 @@ scores_plan <- drake_plan(
       lid_exp = cor(lid,    logexp) %>% scales::number(accuracy=0.001)
     ) %>%
     knitr::kable(format="latex", booktabs=T)
+  },
+
+  stats_table = {
+    inner_join(
+      lid_scores %>% filter(k == 100) %>% select(-k),
+      rc_scores %>% filter(k == 100) %>% select(-k)
+    ) %>%
+    inner_join(
+      expansion_scores %>% filter(k == "10/20") %>% select(-k)
+    ) %>%
+    group_by(dataset) %>%
+    summarise(
+      avgLID = mean(lid) %>% scales::number(accuracy=0.01),
+      medianLID = median(lid) %>% scales::number(accuracy=0.01),
+      avgExpansion = mean(logexp) %>% scales::number(accuracy=0.01),
+      medianExpansion = median(logexp) %>% scales::number(accuracy=0.01),
+      avgRC = mean(logrc) %>% scales::number(accuracy=0.01),
+      medianRC = median(logrc) %>% scales::number(accuracy=0.01)
+    ) %>%
+    inner_join(dataset_info) %>%
+    select(dataset, n, dim, avgLID, medianLID, avgRC, medianRC, avgExpansion, medianExpansion, metric) %>%
+    kbl(format="latex", booktabs=T, col.names = c("Dataset", "Data points", "dim.", "avg", "median", "avg", "median", "avg", "median", "Metric")) %>% 
+    add_header_above(c(" " = 3, "LID" = 2, "RC" = 2, "Expansion" = 2, "  " = 1)) %>% 
+    column_spec(4:9, latex_column_spec = "r")
   },
 
 )
