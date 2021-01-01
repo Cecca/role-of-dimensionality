@@ -43,7 +43,7 @@ To re-run the complete set of experiments, use `make install & make run`.
 Changes
 =====
 
-See https://cecca.github.io/role-of-dimensionality-site/ for the evaluation including plots, preprocessed datasets, and raw results.
+See https://cecca.github.io/role-of-dimensionality/ for the evaluation including plots, preprocessed datasets, and raw results.
 
 Generating the datasets described in the paper works as follows. (We use `glove-100-angular` as an example.)
 
