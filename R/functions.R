@@ -160,9 +160,7 @@ do_plot_recall_vs_distcomps_paper <- function(data) {
 }
 
 do_plot_recall_vs_qps_lid_paper <- function(data) {
-  frontier <- data %>% 
-    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-    psel(high(qps) * high(recall)) %>% 
+  frontier <- data %>% group_by(dataset, difficulty, difficulty_type, algorithm) %>% psel(high(qps) * high(recall)) %>% 
     ungroup() %>% 
     mutate(difficulty = factor(difficulty, 
                                levels = c("easy", "middle", "hard"),

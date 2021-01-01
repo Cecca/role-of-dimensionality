@@ -1043,5 +1043,59 @@ plan <- drake_plan(
     print(plot_k100)
     dev.off()
   },
+
+  data_lid5_comparison = {
+    con5 <- DBI::dbConnect(RSQLite::SQLite(), "export-lid-5.db")
+    dat <- tbl(con5, "main") %>%
+      filter(k == 10) %>%
+      collect() %>%
+      mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset)) %>%
+      rename(recall = avg_recall, rel = avg_rel) %>%
+      mutate(lid_k = "5") %>%
+      bind_rows(mutate(summarized, lid_k = "100")) %>%
+      filter(difficulty_type == "lid", algorithm == "IVF", dataset == "GNEWS")
+    # dbDisconnect(con5)
+    dat
+  },
+
+  plot_lid5_comparison = {
+    frontier <- data_lid5_comparison %>% 
+      group_by(dataset, difficulty, difficulty_type, algorithm, lid_k) %>% 
+      psel(high(qps) * high(recall)) %>% 
+      ungroup() %>% 
+      mutate(difficulty = factor(difficulty, 
+                                levels = c("easy", "middle", "diverse", "hard"),
+                                ordered = TRUE))
+    p <- frontier %>% 
+      ggplot(aes(x=recall, y=qps, linetype=difficulty, color=factor(lid_k))) +
+      geom_point(size=0.8) +
+      geom_line(alpha=0.8) +
+      scale_x_continuous(trans=scales::exp_trans(base = 10),
+                        breaks = c(0, .25, .5, .75, 1),
+                        labels = c("0", "0.25", "0.5", "0.75", "1")) +
+      scale_y_log10() +
+      # scale_color_algo() +
+      labs(
+        color = "$k$ for LID estimation",
+        x = "Recall",
+        y = "QPS"
+      ) +
+      facet_wrap(vars(dataset)) +
+      theme_bw()  +
+      theme(legend.position = "top",
+            legend.direction = "horizontal",
+            legend.box = "vertical",
+            legend.box.margin = margin(0,0,0,0),
+            legend.box.spacing = unit(c(0,0,0,0), "mm"),
+            legend.spacing.y = unit(0, "mm"),
+            text = element_text(size = 8),
+            plot.margin = unit(c(0,0,0,0), "cm"))
+
+    ggsave("imgs/compare-lid-5.png", width=7, height=4, dpi=300)
+    tikz(file = here("imgs", "compare-lid-5.tex"),
+         width = 5.5, height = 3)
+    print(p)
+    dev.off()
+  }
   
 )
