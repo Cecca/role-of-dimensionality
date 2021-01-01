@@ -39,15 +39,15 @@ assert len(avg) == len(queries)
 
 for i in range(len(queries)):
     for j in range(k - 1, 100):
-        if f['distances'][i][j] > 1e-6:
-            dist = f['distances'][i][j]
+        if distances[i][j] > 1e-6:
+            dist = distances[i][j]
             break
 
     estimates[i] = (avg[i] / dist)
 
 for i,e in enumerate(estimates):
     print(i, e)
-print(sys.argv[1], numpy.median(estimates))
+# print(sys.argv[1], numpy.median(estimates))
 
 
 
