@@ -1550,7 +1550,7 @@ plot_score_distribution <- function(distribution, score, param, param_low, param
   }
 
   medians <- distribution %>%
-    filter({{param}} == param_low) %>%
+    filter({{param}} == param_high) %>%
     group_by(dataset) %>%
     summarise(median_score = median({{score}})) %>%
     ungroup()
@@ -1566,6 +1566,7 @@ plot_score_distribution <- function(distribution, score, param, param_low, param
       hard_threshold = {{score}},
       dataset_id = row_number(ordering(desc(median_score)))
     ) %>%
+    (function(d) {print(arrange(d, dataset_id) %>% select(dataset_id, dataset, median_score)); d}) %>%
     select(dataset, dataset_id, hard_threshold)
 
   distribution <- inner_join(distribution, datasets)
