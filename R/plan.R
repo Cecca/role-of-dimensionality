@@ -106,7 +106,7 @@ plan <- drake_plan(
     mutate(dataset = if_else(dataset == "GLOVE-angular", "GLOVE", dataset)) %>%
     rename(recall = avg_recall, rel = avg_rel),
 
-  summarized_csv = write_csv(summarized_all, file_out("web/data/summarised.csv")),
+  summarized_csv = write_csv(summarized_all, file_out("docs/data/summarised.csv")),
   
   # detail = target(
   #   read_parquet("detail.parquet"),
@@ -615,80 +615,51 @@ plan <- drake_plan(
   
   # ------- Performance distribution scores ------------
 
-  # perf_distribution_part = {
-  #   # algorithms <- c("Annoy")
-  #   # datasets <- c("GLOVE")
-  #   # difficulties <- c("hard")
-  #   cat(str_wrap("We will now compute distributions for several configurations of all
-  #                 combinations of algorithms/datasets. This will take a long time.
-  #                 Index the database to speed this up.\n"))
-  #   types <- c("lid", "expansion", "lrc")
-  #   n <- length(algorithms) * length(datasets) * length(difficulties) * length(types) * length(kValues)
-  #   i <- 1
-  #   for(algorithm_name in algorithms) {
-  #     for(dataset_name in datasets) {
-  #       for(difficulty_name in difficulties) {
-  #         for(difficulty_type_name in types) {
-  #           for(kValue in kValues) {
-  #             cat(paste0(i, "/", n, "\n"))
-  #             i <- i + 1
-  #             part <- detail() %>%
-  #               filter(algorithm == algorithm_name,
-  #                     dataset == dataset_name,
-  #                     difficulty == difficulty_name,
-  #                     difficulty_type == difficulty_type_name,
-  #                     k == kValue) %>% 
-  #               collect()
-  #             if (nrow(part) > 0) {
-  #               part %>%
-  #                 group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
-  #                 summarise(
-  #                   # recall_histogram = list(tibble(recall=recall) %>% count(recall)),
-  #                   recall_distribution = list(broom::tidy(density(recall, cut=0))),
-  #                   qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
-  #                   recall = mean(recall),
-  #                   qps = 1/mean(query_time)
-  #                 ) %>%
-  #                 arrange(recall) %>%
-  #                 psel(high(qps) * high(recall)) %>%
-  #                 mutate(id = row_number()) %>%
-  #                 jsonlite::write_json(here("web", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, kValue, "json", sep=".")))
-  #             }
-  #           }
-  #         }
-  #       }
-  #     }
-  #   }
-  # },
-  
-  # # TODO: this would be better replaced with a plot built with React/D3
-  # # plot_distribution = target({
-  # #   plot_data <- detail() %>%
-  # #     filter(algorithm == algorithm_name,
-  # #            dataset == dataset_name,
-  # #            difficulty == difficulty_name,
-  # #            difficulty_type == difficulty_type_name) %>% 
-  # #     collect()
-  # #   interactive_distribution_plot(plot_data)
-  # #   },
-  # #   transform = cross(
-  # #     algorithm_name = !!algorithms,
-  # #     dataset_name = !!datasets,
-  # #     difficulty_name = !!difficulties,
-  # #     difficulty_type_name = c("expansion", "lid")
-  # #   )
-  # # ),
-  # #
-  # # figure_distribution = target(
-  # #   htmlwidgets::saveWidget(plot_distribution,
-  # #                           here("imgs", str_c("perf-distribution-",
-  # #                                              dataset_name, "-",
-  # #                                              difficulty_name, "-",
-  # #                                              difficulty_type_name, "-",
-  # #                                              algorithm_name,
-  # #                                              ".html"))),
-  # #   transform = map(plot_distribution)
-  # # ),
+  perf_distribution_part = {
+    # algorithms <- c("Annoy")
+    # datasets <- c("GLOVE")
+    # difficulties <- c("hard")
+    cat(str_wrap("We will now compute distributions for several configurations of all
+                  combinations of algorithms/datasets. This will take a long time.
+                  Index the database to speed this up.\n"))
+    types <- c("lid", "expansion", "lrc")
+    n <- length(algorithms) * length(datasets) * length(difficulties) * length(types) * length(kValues)
+    i <- 1
+    for(algorithm_name in algorithms) {
+      for(dataset_name in datasets) {
+        for(difficulty_name in difficulties) {
+          for(difficulty_type_name in types) {
+            for(kValue in kValues) {
+              cat(paste0(i, "/", n, "\n"))
+              i <- i + 1
+              part <- detail() %>%
+                filter(algorithm == algorithm_name,
+                      dataset == dataset_name,
+                      difficulty == difficulty_name,
+                      difficulty_type == difficulty_type_name,
+                      k == kValue) %>% 
+                collect()
+              if (nrow(part) > 0) {
+                part %>%
+                  group_by(algorithm, dataset, difficulty, difficulty_type, parameters) %>%
+                  summarise(
+                    # recall_histogram = list(tibble(recall=recall) %>% count(recall)),
+                    recall_distribution = list(broom::tidy(density(recall, cut=0))),
+                    qps_distribution = list(broom::tidy(density(1/query_time, cut=0))),
+                    recall = mean(recall),
+                    qps = 1/mean(query_time)
+                  ) %>%
+                  arrange(recall) %>%
+                  psel(high(qps) * high(recall)) %>%
+                  mutate(id = row_number()) %>%
+                  jsonlite::write_json(here("docs", "data", str_c(algorithm_name, dataset_name, difficulty_name, difficulty_type_name, kValue, "json", sep=".")))
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   
   data_performance_distribution_paper = detail() %>% 
     filter(dataset == "GLOVE-2M",
