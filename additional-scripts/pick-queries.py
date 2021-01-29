@@ -37,6 +37,11 @@ dd = f['distances']
 with open(gn) as g:
     lines = g.readlines()
 
+k = 10
+if gn.count("-") == 2:
+    k = int(gn.split("-")[2].split(".")[0])
+
+
 easy = list(map(int, lines[1].strip()[1:-1].split(",")))
 middle = list(map(int, lines[3].strip()[1:-1].split(",")))
 hard = list(map(int, lines[5].strip()[1:-1].split(",")))
@@ -45,8 +50,8 @@ diverse = list(map(int, lines[7].strip()[1:-1].split(",")))
 
 # make four different versions containing the different querysets
 
-def create_dataset(f, train, nn, dd, l, name, difficulty_type):
-    g = h5py.File(fn.replace('.hdf5','') + '-{}-{}.hdf5'.format(name, difficulty_type), 'w')
+def create_dataset(f, train, nn, dd, l, name, difficulty_type, k=10):
+    g = h5py.File(fn.replace('.hdf5','') + '-{}-{}-{}.hdf5'.format(name, difficulty_type, k), 'w')
 
     g.attrs['distance'] = f.attrs['distance']
     g.attrs['point_type'] = f.attrs['point_type']
@@ -74,8 +79,8 @@ elif use_rc:
 else:
     difficulty_type = "lid"
 
-create_dataset(f, train, nn, dd, easy, 'easy', difficulty_type)
-create_dataset(f, train, nn, dd, middle, 'middle', difficulty_type)
-create_dataset(f, train, nn, dd, hard, 'hard', difficulty_type)
-create_dataset(f, train, nn, dd, diverse, 'diverse', difficulty_type)
+create_dataset(f, train, nn, dd, easy, 'easy', difficulty_type, k)
+create_dataset(f, train, nn, dd, middle, 'middle', difficulty_type, k)
+create_dataset(f, train, nn, dd, hard, 'hard', difficulty_type, k)
+create_dataset(f, train, nn, dd, diverse, 'diverse', difficulty_type, k)
 

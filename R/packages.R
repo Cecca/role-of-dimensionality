@@ -17,5 +17,6 @@ suppressPackageStartupMessages({
   library(tikzDevice)
   library(directlabels)
   library(arrow)
+  library(kableExtra)
 })
 

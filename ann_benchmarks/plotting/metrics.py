@@ -1,6 +1,13 @@
 from __future__ import absolute_import
 import numpy as np
 
+def compute_knn(dataset_distances, run_distances, count, epsilon=1e-10):
+    threshold = dataset_distances[:,count - 1] + epsilon
+    recalls = np.zeros(len(run_distances))
+    for i in range(len(run_distances)):
+        recalls[i] = np.count_nonzero(run_distances[i] <= threshold[i])
+    return recalls
+
 
 def knn(dataset_distances, run_distances, count, metrics, epsilon=1e-10):
     if 'knn' not in metrics:
@@ -55,6 +62,17 @@ def epsilon(dataset_distances, run_distances, count, metrics, epsilon=0.01):
     else:
         print("Found cached result")
     return metrics[s]
+
+def compute_rel(dataset_distances, run_distances):
+    k = run_distances.shape[1]
+    # Take the first k distances
+    dataset_distances = dataset_distances[:,:k]
+    dataset_sum       = np.sum(dataset_distances, axis=1)
+    run_sum           = np.sum(run_distances, axis=1)
+
+    relative_errors = run_sum / dataset_sum
+
+    return relative_errors
 
 def rel(dataset_distances, run_distances, metrics):
     if 'rel' not in metrics.attrs:

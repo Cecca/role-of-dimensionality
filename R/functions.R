@@ -160,9 +160,7 @@ do_plot_recall_vs_distcomps_paper <- function(data) {
 }
 
 do_plot_recall_vs_qps_lid_paper <- function(data) {
-  frontier <- data %>% 
-    group_by(dataset, difficulty, difficulty_type, algorithm) %>% 
-    psel(high(qps) * high(recall)) %>% 
+  frontier <- data %>% group_by(dataset, difficulty, difficulty_type, algorithm) %>% psel(high(qps) * high(recall)) %>% 
     ungroup() %>% 
     mutate(difficulty = factor(difficulty, 
                                levels = c("easy", "middle", "hard"),
@@ -430,6 +428,24 @@ do_plot_distcomps_vs_qps <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
+do_scatter_distribution <- function(data, x, y, labx, laby) {
+  dataset <- data %>% head(1) %>% select(dataset) %>% pull()
+  
+  scatter <- data %>% 
+    ggplot(aes(x={{x}}, y={{y}})) +
+    scale_y_continuous(breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) +
+    scale_x_continuous(breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) +
+    # scale_x_continuous(labels=scales::number_format(),
+                      #  limits=c(0, NA)) +
+    # scale_y_continuous(labels=scales::number_format(),
+    #                    limits=c(0, NA)) +
+    geom_point(alpha=0.1) +
+    labs(x=labx,
+         y=laby) +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  scatter
+}
 
 do_scatter_distribution_lid_exp <- function(data) {
   dataset <- data %>% head(1) %>% select(dataset) %>% pull()
@@ -490,6 +506,68 @@ do_scatter_distribution_lrc_exp <- function(data) {
 }
 
 
+static_ridges_plot_rel <- function(algo_data) {
+  averages <- algo_data %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
+    summarise(avg_time = mean(query_time), avg_rel=mean(rel)) %>%
+    mutate(qps = 1/avg_time) %>% 
+    mutate(parameters = fct_reorder(parameters, avg_rel)) %>% 
+    psel(high(qps) * low(avg_rel))
+  
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_rel), averages) %>%
+    filter(rel > 1)
+  
+  ggplot(all_points, aes(x=rel, y=qps, group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=25,
+                        size=0.1, show.legend = F) +
+    geom_point(data=averages, 
+               mapping=aes(x=avg_rel), 
+               size=0.3,
+               show.legend = F) +
+    scale_y_log10() +
+    scale_x_continuous(trans=scales::log2_trans(),
+                       limits=c(1,10)) +
+    facet_grid(vars(difficulty), vars(algorithm)) +
+    labs(y="QPS (1/s)", 
+         x="Relative error") +
+    theme_bw()
+}
+  
+static_ridges_plot_qps <- function(algo_data) {
+  dataset <- algo_data %>% distinct(dataset) %>% pull()
+  difficulty <- algo_data %>% distinct(difficulty) %>% pull()
+  difficulty_type <- algo_data %>% distinct(difficulty_type) %>% pull()
+  averages <- algo_data %>%
+    group_by(algorithm, dataset, difficulty, parameters) %>%
+    summarise(avg_time = mean(query_time), avg_recall=mean(recall)) %>%
+    mutate(qps = 1/avg_time) %>% 
+    mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
+    psel(high(qps) * high(avg_recall))
+  
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
+  print(count(all_points, algorithm, difficulty, avg_recall) %>% 
+          filter(algorithm == "IVF") %>% 
+          arrange(desc(avg_recall)))
+  
+  ggplot(all_points, aes(x=1/query_time, 
+                         y=avg_recall,
+                         group=parameters)) +
+    geom_density_ridges(alpha=0.4, scale=15,
+                        size=0.1, show.legend = F) +
+    geom_point(data=averages, 
+               mapping=aes(x=qps), 
+               size=0.3,
+               show.legend = F) +
+    scale_x_log10() + 
+    scale_y_continuous(labels=c("0", "0.3", "0.6", "0.9", "")) +
+    facet_grid(vars(difficulty), vars(algorithm), scales="free_x") +
+    labs(x="QPS (1/s)", 
+         y="recall") +
+    theme_bw()
+  
+}
+
+
 static_ridges_plot_recall <- function(algo_data) {
   averages <- algo_data %>%
     group_by(algorithm, dataset, difficulty, parameters) %>%
@@ -498,7 +576,7 @@ static_ridges_plot_recall <- function(algo_data) {
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
     psel(high(qps) * high(avg_recall))
   
-  all_points <- inner_join(algo_data, averages)
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
   
   ggplot(all_points, aes(x=recall, y=qps, group=parameters)) +
     geom_density_ridges(alpha=0.4, scale=15,
@@ -525,7 +603,7 @@ static_ridges_plot_qps <- function(algo_data) {
     mutate(parameters = fct_reorder(parameters, avg_recall)) %>% 
     psel(high(qps) * high(avg_recall))
   
-  all_points <- inner_join(algo_data, averages)
+  all_points <- inner_join(algo_data %>% select(-qps, -avg_recall), averages)
   print(count(all_points, algorithm, difficulty, avg_recall) %>% 
           filter(algorithm == "IVF") %>% 
           arrange(desc(avg_recall)))
@@ -936,7 +1014,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
                        limits = expansion_range) +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    #labs(caption=params) +
+    labs(x="Expansion dimension") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -967,7 +1045,7 @@ do_plot_recall_vs_expansion_single <- function(detail_with_difficulty) {
 }
 
 do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
-  detail_with_difficulty <- filter(detail_with_difficulty, lrc <= 5)
+  # detail_with_difficulty <- filter(detail_with_difficulty, lrc <= 5)
   params <- detail_with_difficulty %>% distinct(parameters) %>% pull()
   bw <- detail_with_difficulty %>% select(lrc) %>% max() / 20.0
   lrc_range <- detail_with_difficulty %>% select(lrc) %>% range()
@@ -981,7 +1059,7 @@ do_plot_recall_vs_lrc_single <- function(detail_with_difficulty) {
     scale_size_area() +
     #scale_x_log10() +
     coord_cartesian(ylim = c(0,1)) +
-    #labs(caption=params) +
+    labs(x="RC dimension") +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1024,7 +1102,6 @@ do_plot_recall_vs_lid_single <- function(detail_with_difficulty) {
     scale_fill_gradient(low='white', high='black') +
     scale_size_area() +
     coord_cartesian(ylim = c(0,1)) +
-    #labs(caption=params) +
     theme_bw() +
     theme(legend.position = 'bottom',
           plot.margin = unit(c(0,0,0,0), 'cm'),
@@ -1330,7 +1407,103 @@ arrow_plot <- function(data) {
           plot.margin = unit(c(0,0,0,0), "cm"))
 }
 
-plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
+plot_displacement_ridges <- function(data, rank_accurate, rank_less_accurate) {
+  binned <- data %>%
+    ungroup() %>%
+    group_by(dataset) %>%
+    mutate(g_acc = cut({{rank_accurate}}, 30, right=FALSE, labels=FALSE, ordered_result=TRUE))
+  
+  ggplot(binned, aes(x={{rank_less_accurate}}, 
+                     y=g_acc,
+                     #fill = 0.5 - abs(0.5 - stat(ecdf)),
+                     group=factor(g_acc))) +
+    stat_density_ridges(scale=20, rel_min_height=0.01,
+                        geom = "density_ridges_gradient", 
+                        calc_ecdf = FALSE) +
+    scale_x_continuous(trans="reverse",
+                       breaks=c(0),
+                       labels=c("high\nrank")) +
+    scale_y_continuous(trans="reverse",
+                       breaks=c(0),
+                       labels=c("high\nrank")) +
+    facet_wrap(vars(dataset), scales="free") +
+    labs(x="", y="") +
+    scale_fill_viridis_c(name = "Tail probability", direction = 1)
+}
+
+# What we want to show is the _conditional_ probability of a vector getting
+# a rank with k=10 given that it has a rank in some range with k=100
+plot_heatmap <- function(data, rank_accurate, rank_less_accurate) {
+  binned <- data %>%
+    mutate(g_acc = cut({{rank_accurate}}, 50, right=FALSE, labels=FALSE), 
+           g_nonacc = cut({{rank_less_accurate}}, 50, right=FALSE, labels=FALSE)) %>%
+    group_by(dataset, g_acc, g_nonacc) %>%
+    summarise(cnt = n(), .groups="drop_last") %>%
+    mutate(
+      prob = cnt / sum(cnt),
+      binned_prob = cut(prob, 
+                        breaks=c(-0.1, 0.05, 0.1, 0.2, 0.5, 0.8, 1.1),
+                        labels=c("<0.05", "0.05 to 0.1", "0.1 to 0.2", "0.2 to 0.5", "0.5 to 0.8", ">0.8"),
+                        ordered_result=TRUE)
+    ) %>%
+    ungroup()
+
+  print(binned %>% filter(prob > 0.2) %>% group_by(ntile(prob, 6)) %>% summarise(max(prob)))
+
+  ggplot(binned, aes(x=desc(g_acc), y=desc(g_nonacc), fill=ntile(prob, 100), group=(g_acc))) + 
+    geom_tile() +
+    facet_wrap(vars(dataset), ncol=3, scales="free") + 
+    scale_fill_viridis_c(option="inferno") + 
+    scale_x_discrete(breaks=c()) +
+    scale_y_discrete(breaks=c()) +
+    labs(fill="Conditional probability",
+         x="", y="") +
+    theme_classic() +
+    theme(legend.position="top",
+          strip.background = element_blank(),
+          strip.text=element_text(hjust=0.05))
+}
+
+# This plot answers the question: given a range of ranks build with a low accuracy
+# estimator, were those points ranked very far away in the accurate ranking??
+plot_displacements2 <- function(data, rank_accurate, rank_less_accurate) {
+  grays <- rev(sequential_hcl(5, "Grays")[1:4])
+
+  data %>%
+    group_by(dataset) %>%
+    mutate(group=cut( {{rank_less_accurate}}, breaks=50, labels=F)) %>%
+    group_by(dataset, group) %>%
+    summarise(
+      acc_min = min({{ rank_accurate }}),
+      acc_max = max({{ rank_accurate }}),
+      inacc_min = min({{rank_less_accurate}}),
+      inacc_max = max({{rank_less_accurate}}),
+      inacc995 = quantile({{ rank_accurate }}, 0.995),
+      inacc90 = quantile({{ rank_accurate }}, 0.9),
+      inacc75 = quantile({{ rank_accurate }}, 0.75),
+      inacc50 = quantile({{ rank_accurate }}, 0.5),
+      inacc25 = quantile({{ rank_accurate }}, 0.25),
+      inacc10 = quantile({{ rank_accurate }}, 0.1),
+      inacc05 = quantile({{ rank_accurate }}, 0.005)
+    ) %>%
+
+  ggplot(aes(xmin=inacc_min, xmax=inacc_max, ymin=acc_min, ymax=acc_max)) +
+    geom_rect(fill=grays[1], color=NA) +
+    geom_rect(aes(ymin=inacc05, ymax=inacc995), fill=grays[2], color=NA) +
+    geom_rect(aes(ymin=inacc10, ymax=inacc90), fill=grays[3], color=NA) +
+    geom_rect(aes(ymin=inacc25, ymax=inacc75), fill=grays[4], color=NA) +
+    scale_x_continuous(breaks=c(0), trans="reverse") +
+    scale_y_continuous(breaks=c(0), trans="reverse") +
+    facet_wrap(vars(dataset),
+              scales="free",
+              ncol=3) +
+    theme_classic() +
+    theme(strip.background = element_blank(),
+          strip.text=element_text(hjust=0.05))
+
+}
+
+plot_displacements <- function(dataset, x, y, n_hard=10000) {
     pd <- dataset %>%
       mutate(group = cut({{ x }}, 10, labels = F) / 10 - 0.5/10) %>%
       group_by(dataset, group) %>%
@@ -1344,7 +1517,7 @@ plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
         y5 = quantile({{ y }}, 0.05),
         hard_mark = 1 - 10000/n(),
       )
-    p <- ggplot(pd, aes(group)) +
+    ggplot(pd, aes(group)) +
       geom_abline(intercept=0, slope=1) +
       geom_linerange(aes(ymin=ymin, ymax=ymax), color="black") +
       geom_linerange(aes(ymin=y5, ymax=y95), size=1.5, color="black") +
@@ -1357,12 +1530,122 @@ plot_displacements <- function(dataset, x, y, filename, n_hard=10000) {
       facet_wrap(vars(dataset),
                 scales="free",
                 ncol=1)
-    ggsave(plot=p,
-           filename=filename,
-           width=5,
-           height=10,
-           dpi=300)
+    # ggsave(plot=p,
+    #        filename=filename,
+    #        width=5,
+    #        height=10,
+    #        dpi=300)
 }  
   
-  
-  
+plot_score_distribution <- function(distribution, score, param, param_low, param_high, xlab, xmax=NA, reverse=F) {
+  maxval <- distribution %>% summarise(max({{score}})) %>% pull()
+  if (!is.na(xmax)) {
+    maxval <- min(xmax, maxval)
+  }
+
+  ordering <- if (reverse) {
+    function(d) {d}
+  } else {
+    function(d) {desc(d)}
+  }
+
+  medians <- distribution %>%
+    filter({{param}} == param_high) %>%
+    group_by(dataset) %>%
+    summarise(median_score = median({{score}})) %>%
+    ungroup()
+
+  datasets <- distribution %>%
+    filter({{param}} == param_high) %>%
+    arrange(dataset, ordering({{score}})) %>%
+    group_by(dataset) %>%
+    slice(10000) %>%
+    ungroup() %>%
+    inner_join(medians) %>%
+    mutate(
+      hard_threshold = {{score}},
+      dataset_id = row_number(ordering(desc(median_score)))
+    ) %>%
+    (function(d) {print(arrange(d, dataset_id) %>% select(dataset_id, dataset, median_score)); d}) %>%
+    select(dataset, dataset_id, hard_threshold)
+
+  distribution <- inner_join(distribution, datasets)
+  plot_data_high <- distribution %>% 
+    as_tibble() %>%
+    filter({{ param }} == param_high)
+  plot_data_low <- distribution %>% 
+    as_tibble() %>%
+    filter({{ param }} == param_low)
+
+  p <- ggplot(plot_data_high, aes(x={{ score }}, y=dataset_id, group=dataset)) +
+    geom_density_ridges(scale=.95,
+                        rel_min_height = 0.0001,
+                        size=0.3,
+                        color="black",
+                        quantile_lines=T) +
+    geom_density_ridges(scale=.95,
+                        data=plot_data_low,
+                        color="red",
+                        fill="red",
+                        size=0.3,
+                        alpha=0.3,
+                        rel_min_height = 0.0001,
+                        quantile_lines=T) +
+    geom_segment(aes(y=dataset_id, yend = dataset_id+.8, x=hard_threshold, xend=hard_threshold),
+                  data=datasets,
+                  color="steelblue",
+                  size=0.3) +
+    geom_text(aes(y=dataset_id + 0.3, label=dataset, x=maxval),
+              data=datasets,
+              hjust="right",
+              size = 2) +
+    scale_x_continuous(limits=c(NA, xmax)) +
+    labs(y="",
+         x=xlab) +
+    coord_cartesian(clip = "on") +
+    theme_bw() +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(size=8))
+
+    p
+}  
+
+save_figure <- function(plot, basename, tex_width, tex_height, png_width, png_height) {
+  tikz(paste0(basename, ".tex"),
+       width = tex_width, height = tex_height)
+  print(plot)
+  dev.off()
+
+  ggsave(plot=plot, filename=paste0(basename, ".png"),
+         width=png_width, height=png_height, dpi=300)
+}
+
+
+
+# Compute the Pearson correlation between the two given columns without loading
+# into a dataframe all the data, letting the database handle most of the operations
+sqlite_cor <- function(data, X, Y) {
+  data %>%
+    mutate(
+      diffX = {{X}} - mean({{X}}, na.rm=T),
+      diffY = {{Y}} - mean({{Y}}, na.rm=T)
+    ) %>%
+    summarise(
+      mX = mean({{X}}, na.rm=T),
+      mX2 = mean({{X}} * {{X}}, na.rm=T),
+      mY = mean({{Y}}, na.rm=T),
+      mY2 = mean({{Y}} * {{Y}}, na.rm=T),
+      mDiffXY = mean(diffX*diffY, na.rm=T),
+      sample_size = n()
+    ) %>%
+    collect() %>%
+    mutate(
+      corr = mDiffXY / (sqrt(mX2 - mX^2) * sqrt(mY2 - mY^2)),
+      # Transform the correlation with Fisher's transformation
+      zcorr = 1/2 * log((1+corr)/(1-corr))
+    ) %>%
+    select(-mX, -mX2, -mY, -mY2, -mDiffXY)
+}

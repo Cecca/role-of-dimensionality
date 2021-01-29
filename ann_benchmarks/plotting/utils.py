@@ -6,6 +6,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 import os, itertools, json, numpy, pickle
 from ann_benchmarks.plotting.metrics import all_metrics as metrics
+from ann_benchmarks.plotting.metrics import compute_knn, compute_rel
 import matplotlib.pyplot as plt
 import re
 from scipy.spatial.distance import cdist
@@ -224,25 +225,40 @@ def compute_metrics_all_runs(dataset, res, recompute=False):
         yield run_result
 
 
-def run_to_dataframe(data, run, properties, recompute=False):
-    true_nn_distances = data['distances']
+def runs_to_sqlite(dataset, res, conn):
+    for (properties, run) in res:
+        print(".", end="")
+        run_to_sqlite(dataset, run, properties, conn)
+    print()
+
+
+def run_to_sqlite(data, run, properties, conn):
+    true_nn_distances = numpy.array(data['distances'])
     k = len(run['distances'][0])
+    count = int(properties['count'])
+    assert(count == k)
     algo = properties["algo"]
     algo_name = properties["name"]
     dataset = properties['dataset']
     # cache to avoid access to hdf5 file
     run_distances = numpy.array(run["distances"])
     query_times = numpy.array(run['times'])
-    if recompute and 'metrics' in run:
-        print('deleting cached metrics')
-        del run['metrics']
-    metrics_cache = get_or_create_metrics(run)
-    # cache the knn recall (if needed)
-    metrics['k-nn']['function'](true_nn_distances, run_distances, query_times, metrics_cache, run.attrs)
-    recalls = metrics_cache['knn']['recalls']
+
+    recall = compute_knn(true_nn_distances, run_distances, k) / k
+    rel = compute_rel(true_nn_distances, run_distances)
+
+    avg_recall = float(np.mean(recall))
+    avg_epsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, k, epsilon=0.01)) / k)
+    avg_largeepsilon_recall = float(np.mean(compute_knn(true_nn_distances, run_distances, k, epsilon=0.1)) / k)
+    avg_rel = float(np.mean(rel))
+    qps = float(1/np.mean(query_times))
+
+
+    # Data frame to store the query stats data
     df = pd.DataFrame({
-        'recall': numpy.array(recalls) / k,
+        'recall': recall,
         'query_time': query_times,
+        'rel': rel
     })
     if 'expansion' in dataset:
         difficulty_type = 'expansion'
@@ -259,30 +275,72 @@ def run_to_dataframe(data, run, properties, recompute=False):
     dataset = re.sub("-(hard|middle|easy|diverse)", "", dataset)
     dataset = re.sub("-(expansion|lrc|lid)", "", dataset)
 
-    df['queries_per_second'] = 1.0/df['query_time']
     df['lrc'] = dimensionality_measures['lrc']
     df['lid'] = dimensionality_measures['lid']
     df['expansion'] = dimensionality_measures['expansion']
-    df['dataset'] = dataset_map[dataset]
-    df['dataset'] = df['dataset'].astype(dataset_cat)
-    df['algorithm'] = algo_map[algo]
-    df['algorithm'] = df['algorithm'].astype(algo_cat)
-    df['parameters'] = algo_name
-    df['difficulty_type'] = difficulty_type
-    df['difficulty_type'] = df['difficulty_type'].astype(difficulty_type_cat)
-    df['difficulty'] = difficulty
-    df['difficulty'] = df['difficulty'].astype(difficulty_cat)
+
+    dataset = dataset_map[dataset]
+    algorithm = algo_map[algo]
+    parameters = algo_name
+    difficulty_type = difficulty_type
+    difficulty = difficulty
+
+    distcomps = int(metrics['distcomps']['function'](true_nn_distances, run_distances, query_times, None, run.attrs))
+    build_time = float(run.attrs['build_time'])
+    index_size = int(run.attrs.get("index_size", 0))
+
+    # Do the insertion in the two tables in a transaction
+    with conn:
+        # Null is for the auto increment key
+        # TODO: add the averaged values of the metrics
+        cursor = conn.execute(
+            """
+            INSERT INTO main VALUES (
+                NULL,
+                :k,
+                :dataset,
+                :algorithm,
+                :parameters,
+                :difficulty_type,
+                :difficulty,
+                :qps,
+                :avg_recall,
+                :avg_epsilon_recall,
+                :avg_largeepsilon_recall,
+                :avg_rel,
+                :distcomps,
+                :build_time,
+                :index_size,
+                :queriessize
+            )
+            """,
+            {
+                "k": count,
+                "dataset": dataset,
+                "algorithm": algorithm,
+                "parameters": parameters,
+                "difficulty_type": difficulty_type,
+                "difficulty": difficulty,
+                "qps": qps,
+                "avg_recall": avg_recall,
+                "avg_epsilon_recall": avg_epsilon_recall,
+                "avg_largeepsilon_recall": avg_largeepsilon_recall,
+                "avg_rel": avg_rel,
+                "distcomps": distcomps,
+                "build_time": build_time,
+                "index_size": index_size,
+                "queriessize": index_size / qps
+            }
+        )
+        # cursor = conn.execute(
+        #     "INSERT INTO main VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        #     (dataset, algorithm, parameters, difficulty_type, difficulty, qps, avg_recall, avg_rel, distcomps))
+        idx = cursor.lastrowid
+
+        df['id'] = idx
+        df.to_sql('query_stats', conn, if_exists='append', index=False)
+
     return df
-
-
-def runs_to_dataframe(true_nn_distances, res, recompute=False):
-    dfs = []
-    for i, (properties, run) in enumerate(res):
-        dfs.append(run_to_dataframe(true_nn_distances, run, properties, recompute))
-    if len(dfs) > 0:
-        return pd.concat(dfs)
-    else:
-        return None
 
 
 def compute_all_metrics(true_nn_distances, run, properties, recompute=False):
