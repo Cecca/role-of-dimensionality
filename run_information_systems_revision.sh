@@ -1,4 +1,4 @@
-for algo in annoy; do #hnsw\(faiss\) NGT-onng faiss-ivf puffinn; do
+for algo in annoy hnsw\(faiss\) NGT-onng faiss-ivf puffinn; do
     for ds in data/*; do
         ds=$(basename $ds .hdf5)
         c=`awk -F"-" '{print NF-1}' <<< $ds`
